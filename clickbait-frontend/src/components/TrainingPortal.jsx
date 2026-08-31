@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { Mail, BookOpen, Send, CheckCircle, ShieldAlert, Sparkles } from 'lucide-react';
+import React from 'react';
+import { Mail, BookOpen, Send, CheckCircle, ShieldAlert, Sparkles, Terminal } from 'lucide-react';
 
 export default function TrainingPortal({ 
   employees = [], 
   onSendTrainingInvite, 
   onSendAllTrainingInvites,
-  logs = [] // We can pass a log list from App.jsx to show in the telemetry logger box!
+  logs = []
 }) {
-  // Filter employees who clicked or entered credentials (meaning they fell for the phishing link)
   const phishedTargets = employees.filter(e => 
     ['Clicked', 'Compromised', 'Training Sent', 'Training Attended'].includes(e.status)
   );
@@ -24,7 +23,6 @@ export default function TrainingPortal({
 
   const completionRate = totalPhished > 0 ? Math.round((totalCompleted / totalPhished) * 100) : 0;
 
-  // Filter clickers/compromised targets who haven't received training emails yet
   const pendingInvitesCount = employees.filter(e => 
     ['Clicked', 'Compromised'].includes(e.status)
   ).length;
@@ -36,10 +34,10 @@ export default function TrainingPortal({
       <div className="dashboard-grid">
         <div className="kpi-card clicked">
           <div className="kpi-header">
-            <span className="kpi-title">Vulnerable Clickers</span>
-            <ShieldAlert className="kpi-icon" size={20} style={{ color: '#ef4444' }} />
+            <span className="kpi-title">Vulnerable Targets</span>
+            <ShieldAlert className="kpi-icon" size={20} style={{ color: 'var(--danger-accent)' }} />
           </div>
-          <div className="kpi-value" style={{ color: '#ef4444' }}>{totalPhished}</div>
+          <div className="kpi-value" style={{ color: 'var(--danger-accent)' }}>{totalPhished}</div>
           <div className="kpi-subtext">
             <span>Fell for the phishing simulation link</span>
           </div>
@@ -48,22 +46,22 @@ export default function TrainingPortal({
         <div className="kpi-card compromised">
           <div className="kpi-header">
             <span className="kpi-title">Training Invites Dispatched</span>
-            <Mail className="kpi-icon" size={20} style={{ color: '#60a5fa' }} />
+            <Mail className="kpi-icon" size={20} style={{ color: 'var(--primary-accent)' }} />
           </div>
-          <div className="kpi-value" style={{ color: '#60a5fa' }}>{totalInvites}</div>
+          <div className="kpi-value" style={{ color: 'var(--text-accent)' }}>{totalInvites}</div>
           <div className="kpi-subtext">
-            <span>{pendingInvitesCount} targets awaiting training invites</span>
+            <span>{pendingInvitesCount} targets awaiting invitations</span>
           </div>
         </div>
 
         <div className="kpi-card training">
           <div className="kpi-header">
-            <span className="kpi-title">Training Completed</span>
-            <BookOpen className="kpi-icon" size={20} style={{ color: '#00ff00' }} />
+            <span className="kpi-title">Remediation Completed</span>
+            <BookOpen className="kpi-icon" size={20} style={{ color: 'var(--success-accent)' }} />
           </div>
-          <div className="kpi-value neon">{totalCompleted}</div>
+          <div className="kpi-value" style={{ color: 'var(--success-accent)' }}>{totalCompleted}</div>
           <div className="kpi-subtext">
-            <span style={{ color: '#00ff00' }}>{completionRate}% Attendance rate</span>
+            <span style={{ color: 'var(--success-accent)', fontWeight: '500' }}>{completionRate}% Attendance Rate</span>
           </div>
         </div>
       </div>
@@ -71,9 +69,9 @@ export default function TrainingPortal({
       {/* Progress & Automation Bar */}
       <div className="training-progress-container">
         <div className="training-progress-info">
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Share Tech Mono', fontSize: '14px' }}>
-            <span style={{ color: 'var(--text-secondary)' }}>TRAINING COMPLETION MATRIX</span>
-            <span style={{ color: '#00ff00' }}>{totalCompleted} / {totalPhished} Targets Attended</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '500', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Security Awareness Progress</span>
+            <span style={{ color: 'var(--success-accent)' }}>{totalCompleted} of {totalPhished} Attended</span>
           </div>
           <div className="progress-bar-bg">
             <div className="progress-bar-fill" style={{ width: `${completionRate}%` }}></div>
@@ -84,13 +82,13 @@ export default function TrainingPortal({
           <button 
             disabled={pendingInvitesCount === 0}
             onClick={onSendAllTrainingInvites} 
-            className="btn btn-primary"
+            className="btn btn-accent"
             style={{ 
               opacity: pendingInvitesCount === 0 ? 0.5 : 1,
               cursor: pendingInvitesCount === 0 ? 'not-allowed' : 'pointer'
             }}
           >
-            <Sparkles size={16} /> Automate Training Emails ({pendingInvitesCount})
+            <Sparkles size={16} /> Automate Remediation Invitations ({pendingInvitesCount})
           </button>
         </div>
       </div>
@@ -101,7 +99,7 @@ export default function TrainingPortal({
         {/* Table of Clickers */}
         <div className="directory-section" style={{ border: '1px solid var(--border)' }}>
           <h3 className="chart-title" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px', margin: 0, marginBottom: '16px' }}>
-            <BookOpen size={16} style={{ marginRight: '6px', color: '#00ff00' }} /> Training Roster
+            <BookOpen size={16} style={{ marginRight: '6px', color: 'var(--primary-accent)' }} /> Training Roster
           </h3>
 
           <div className="table-wrapper">
@@ -110,7 +108,7 @@ export default function TrainingPortal({
                 <tr>
                   <th>Recipient Details</th>
                   <th>Department</th>
-                  <th>Phish Status</th>
+                  <th>Simulation Result</th>
                   <th>Training Stage</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -118,8 +116,8 @@ export default function TrainingPortal({
               <tbody>
                 {phishedTargets.length === 0 ? (
                   <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#71717a', fontFamily: 'Share Tech Mono' }}>
-                      [SECURE]: NO EMPLOYEES HAVE TRIPPED THE PHISHING SENSOR YET
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                      No employees have tripped phishing sensors yet.
                     </td>
                   </tr>
                 ) : (
@@ -127,7 +125,7 @@ export default function TrainingPortal({
                     <tr key={emp.id}>
                       <td>
                         <div className="emp-name-cell">
-                          <span style={{ fontWeight: '500' }}>{emp.name}</span>
+                          <span style={{ fontWeight: '600' }}>{emp.name}</span>
                           <span className="emp-email">{emp.email}</span>
                         </div>
                       </td>
@@ -136,16 +134,16 @@ export default function TrainingPortal({
                       </td>
                       <td>
                         <span className="status-badge clicked" style={{ 
-                          backgroundColor: emp.status === 'Compromised' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-                          borderColor: emp.status === 'Compromised' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(234, 179, 8, 0.4)',
-                          color: emp.status === 'Compromised' ? '#ef4444' : '#eab308'
+                          backgroundColor: emp.status === 'Compromised' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                          borderColor: emp.status === 'Compromised' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(245, 158, 11, 0.4)',
+                          color: emp.status === 'Compromised' ? 'var(--danger-accent)' : 'var(--warning-accent)'
                         }}>
-                          {emp.status === 'Compromised' ? 'Entered Creds' : 'Clicked Link'}
+                          {emp.status === 'Compromised' ? 'Submitted Creds' : 'Clicked Link'}
                         </span>
                       </td>
                       <td>
                         {emp.status === 'Clicked' || emp.status === 'Compromised' ? (
-                          <span className="status-badge" style={{ background: '#18181b', color: '#71717a', border: '1px solid var(--border)' }}>
+                          <span className="status-badge pending">
                             Awaiting Dispatch
                           </span>
                         ) : emp.status === 'Training Sent' ? (
@@ -154,7 +152,7 @@ export default function TrainingPortal({
                           </span>
                         ) : (
                           <span className="status-badge training-attended">
-                            <CheckCircle size={10} style={{ display: 'inline', marginRight: '4px' }} /> Attended Session
+                            <CheckCircle size={10} style={{ display: 'inline', marginRight: '4px' }} /> Completed
                           </span>
                         )}
                       </td>
@@ -170,13 +168,13 @@ export default function TrainingPortal({
                           )}
                           
                           {emp.status === 'Training Sent' && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Share Tech Mono' }}>
-                              Simulating Attendance...
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              In Progress...
                             </span>
                           )}
 
                           {emp.status === 'Training Attended' && (
-                            <span style={{ fontSize: '11px', color: '#00ff00', fontFamily: 'Share Tech Mono' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--success-accent)', fontWeight: '500' }}>
                               Completed ✅
                             </span>
                           )}
@@ -190,17 +188,17 @@ export default function TrainingPortal({
           </div>
         </div>
 
-        {/* Real-time Telemetry Dispatch Logs */}
+        {/* Real-time Activity Logs */}
         <div className="chart-card" style={{ display: 'flex', flexDirection: 'column' }}>
           <h3 className="chart-title">
-            <Sparkles size={16} /> Training Dispatch Logs
+            <Terminal size={16} /> Campaign Activity Log
           </h3>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', fontFamily: 'Share Tech Mono' }}>
-            [MONITOR ACTIVE DISPATCH TELEMETRY]
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Real-time event stream
           </div>
           <div className="console-log-box" style={{ flexGrow: 1, minHeight: '240px' }}>
             {logs.length === 0 ? (
-              <div style={{ color: '#71717a' }}>[SYSTEM IDLE - AWAITING USER TRIGGER]</div>
+              <div style={{ color: 'var(--text-muted)' }}>No recent activity logged</div>
             ) : (
               logs.map((log, idx) => (
                 <div key={idx} className="console-line">

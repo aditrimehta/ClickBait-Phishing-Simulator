@@ -187,6 +187,68 @@ function App() {
     }
   };
 
+  // 4.3 Send department-wide simulation emails
+  const handleSendDepartmentEmails = (deptName) => {
+    const deptTargets = employees.filter(e => deptName === 'All' || e.department === deptName);
+    const pendingTargets = deptTargets.filter(e => e.status === 'Pending');
+
+    if (deptTargets.length === 0) return;
+
+    addLog(`📢 Department Campaign: Dispatching simulation emails to ${deptName === 'All' ? 'ALL' : deptName} department (${pendingTargets.length} pending)...`);
+
+    // Set all pending employees in department to 'Sent'
+    setEmployees(prev => prev.map(emp => {
+      if ((deptName === 'All' || emp.department === deptName) && emp.status === 'Pending') {
+        return { ...emp, status: 'Sent', phishOutcome: null };
+      }
+      return emp;
+    }));
+
+    // Trigger simulation timer
+    setTimeout(() => {
+      setEmployees(currentEmployees => {
+        return currentEmployees.map(emp => {
+          if ((deptName !== 'All' && emp.department !== deptName) || emp.status !== 'Sent') return emp;
+
+          const roll = Math.random() * 100;
+          let outcome = 'Ignored';
+
+          const dept = emp.department;
+          if (['IT', 'Tech'].includes(dept)) {
+            if (roll < 12) outcome = 'Compromised';
+            else if (roll < 28) outcome = 'Clicked';
+          } else if (['Sales', 'Marketing'].includes(dept)) {
+            if (roll < 45) outcome = 'Compromised';
+            else if (roll < 75) outcome = 'Clicked';
+          } else if (['HR', 'Finance'].includes(dept)) {
+            if (roll < 30) outcome = 'Compromised';
+            else if (roll < 60) outcome = 'Clicked';
+          } else {
+            if (roll < 20) outcome = 'Compromised';
+            else if (roll < 45) outcome = 'Clicked';
+          }
+
+          let finalStatus = 'Sent';
+          let phishOutcome = null;
+
+          if (outcome === 'Clicked') {
+            finalStatus = 'Clicked';
+            phishOutcome = 'Clicked';
+            addLog(`⚠️ Link opened: ${emp.name} (${emp.department}) clicked phishing link!`);
+          } else if (outcome === 'Compromised') {
+            finalStatus = 'Compromised';
+            phishOutcome = 'Compromised';
+            addLog(`🚨 CREDENTIALS SUBMITTED: ${emp.name} (${emp.department}) entered credentials!`);
+          } else {
+            addLog(`✅ Safe action: ${emp.name} (${emp.department}) ignored simulation message.`);
+          }
+
+          return { ...emp, status: finalStatus, phishOutcome };
+        });
+      });
+    }, 1500);
+  };
+
   // 5. Send training email invite (individual)
   const handleSendTrainingInvite = (id) => {
     setEmployees(prev => prev.map(emp => 
@@ -294,6 +356,7 @@ function App() {
             onEditEmployee={handleEditEmployee}
             onDeleteEmployee={handleDeleteEmployee}
             onUpdateStatus={handleUpdateStatus}
+            onSendDepartmentEmails={handleSendDepartmentEmails}
           />
         )}
 

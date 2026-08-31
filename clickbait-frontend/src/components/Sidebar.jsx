@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, Users, BookOpen, ShieldAlert } from 'lucide-react';
+import { Shield, Users, GraduationCap, Server } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab, employees = [] }) {
   // Count clickers + compromised for quick badges
@@ -10,8 +10,8 @@ export default function Sidebar({ activeTab, setActiveTab, employees = [] }) {
     <aside className="sidebar">
       {/* Brand Header */}
       <div className="sidebar-header">
-        <Terminal className="sidebar-logo-icon" size={24} />
-        <span className="sidebar-title">PHISHGUARD</span>
+        <Shield className="sidebar-logo-icon" size={24} />
+        <span className="sidebar-title">PhishGuard</span>
       </div>
 
       {/* Nav Menu */}
@@ -20,8 +20,8 @@ export default function Sidebar({ activeTab, setActiveTab, employees = [] }) {
           onClick={() => setActiveTab('dashboard')} 
           className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`}
         >
-          <ShieldAlert size={18} />
-          <span>System Monitor</span>
+          <Server size={18} />
+          <span>Security Monitor</span>
         </button>
 
         <button 
@@ -30,15 +30,7 @@ export default function Sidebar({ activeTab, setActiveTab, employees = [] }) {
         >
           <Users size={18} />
           <span>Target Directory</span>
-          <span style={{ 
-            marginLeft: 'auto', 
-            fontSize: '11px', 
-            fontFamily: 'Share Tech Mono', 
-            background: 'rgba(255,255,255,0.05)', 
-            padding: '2px 6px', 
-            borderRadius: '4px',
-            border: '1px solid var(--border)'
-          }}>
+          <span className="sidebar-badge">
             {employees.length}
           </span>
         </button>
@@ -47,19 +39,16 @@ export default function Sidebar({ activeTab, setActiveTab, employees = [] }) {
           onClick={() => setActiveTab('training')} 
           className={`sidebar-item ${activeTab === 'training' ? 'active' : ''}`}
         >
-          <BookOpen size={18} />
+          <GraduationCap size={18} />
           <span>Training Portal</span>
           {phishedCount > 0 && (
-            <span style={{ 
-              marginLeft: 'auto', 
-              fontSize: '11px', 
-              fontFamily: 'Share Tech Mono', 
-              background: trainingDoneCount === phishedCount ? 'rgba(0, 255, 0, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
-              color: trainingDoneCount === phishedCount ? '#00ff00' : '#ef4444',
-              padding: '2px 6px', 
-              borderRadius: '4px',
-              border: trainingDoneCount === phishedCount ? '1px solid rgba(0, 255, 0, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)'
-            }}>
+            <span 
+              className="sidebar-badge"
+              style={{ 
+                background: trainingDoneCount === phishedCount ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
+                color: trainingDoneCount === phishedCount ? 'var(--success-accent)' : 'var(--danger-accent)'
+              }}
+            >
               {trainingDoneCount}/{phishedCount}
             </span>
           )}
@@ -70,10 +59,10 @@ export default function Sidebar({ activeTab, setActiveTab, employees = [] }) {
       <div className="sidebar-footer">
         <div className="sidebar-status">
           <span className="sidebar-status-dot"></span>
-          <span>CONSOLE_SECURE_SSL</span>
+          <span>SYSTEM ACTIVE & PROTECTED</span>
         </div>
-        <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Share Tech Mono', paddingLeft: '8px' }}>
-          DEPT_SCOPE: IT/TECH/HR/SALES...
+        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', paddingLeft: '4px' }}>
+          Scope: IT / HR / Sales / Tech
         </div>
       </div>
     </aside>

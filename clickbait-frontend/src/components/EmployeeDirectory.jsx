@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Send, MousePointer, ShieldAlert, RefreshCw, X, BookOpen } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Send, MousePointer, ShieldAlert, RefreshCw, X, Users, Layers, Zap } from 'lucide-react';
 
 const DEPARTMENTS = ['HR', 'Tech', 'Sales', 'Marketing', 'Finance', 'IT', 'General'];
 
@@ -8,11 +8,16 @@ export default function EmployeeDirectory({
   onAddEmployee, 
   onEditEmployee, 
   onDeleteEmployee, 
-  onUpdateStatus 
+  onUpdateStatus,
+  onSendDepartmentEmails
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
   
+  // Department Bulk Dispatch Switch State
+  const [isDeptDispatchEnabled, setIsDeptDispatchEnabled] = useState(false);
+  const [deptDispatchTarget, setDeptDispatchTarget] = useState('IT');
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
@@ -24,7 +29,7 @@ export default function EmployeeDirectory({
   const [formDept, setFormDept] = useState('General');
   const [formError, setFormError] = useState('');
 
-  // 1. Filtered Employees
+  // Filtered Employees
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = 
       emp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -35,7 +40,12 @@ export default function EmployeeDirectory({
     return matchesSearch && matchesDept;
   });
 
-  // 2. Open Modal for Add
+  // Calculate pending targets for department bulk dispatch
+  const deptPendingTargets = employees.filter(e => 
+    (deptDispatchTarget === 'All' || e.department === deptDispatchTarget) && e.status === 'Pending'
+  );
+
+  // Open Modal for Add
   const handleOpenAdd = () => {
     setModalMode('add');
     setCurrentEmployeeId(null);
@@ -46,7 +56,7 @@ export default function EmployeeDirectory({
     setIsModalOpen(true);
   };
 
-  // 3. Open Modal for Edit
+  // Open Modal for Edit
   const handleOpenEdit = (emp) => {
     setModalMode('edit');
     setCurrentEmployeeId(emp.id);
@@ -57,7 +67,7 @@ export default function EmployeeDirectory({
     setIsModalOpen(true);
   };
 
-  // 4. Form Submit Handler
+  // Form Submit Handler
   const handleSubmit = (e) => {
     e.preventDefault();
     setFormError('');
@@ -122,7 +132,7 @@ export default function EmployeeDirectory({
         );
       default:
         return (
-          <span className="status-badge" style={{ background: '#18181b', border: '1px solid #2e2e33', color: '#71717a' }}>
+          <span className="status-badge pending">
             PENDING
           </span>
         );
@@ -131,27 +141,112 @@ export default function EmployeeDirectory({
 
   return (
     <div className="directory-section">
-      {/* Search and Filters Header */}
+      
+      {/* Header Bar */}
       <div className="directory-header">
-        <h2 style={{ fontFamily: 'Share Tech Mono', color: '#00ff00', margin: 0, textShadow: '0 0 8px rgba(0,255,0,0.2)' }}>
-          RECIPIENT LOGS
-        </h2>
+        <div>
+          <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '18px', fontWeight: '600' }}>
+            Target Employee Directory
+          </h2>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            Manage target profiles, filter scope, and execute department-wide dispatches
+          </div>
+        </div>
         
         <div className="directory-actions">
-          {/* Search bar */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', color: '#71717a' }} />
-            <input 
-              type="text" 
-              placeholder="Search by name/email..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-              style={{ paddingLeft: '36px' }}
-            />
+          {/* Department Dispatch Toggle Switch control */}
+          <div className="toggle-switch-container">
+            <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>
+              Department Bulk Dispatch
+            </span>
+            <label className="toggle-switch">
+              <input 
+                type="checkbox" 
+                checked={isDeptDispatchEnabled}
+                onChange={(e) => setIsDeptDispatchEnabled(e.target.checked)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
           </div>
 
-          {/* Department filter */}
+          {/* Add Employee Button */}
+          <button onClick={handleOpenAdd} className="btn btn-primary">
+            <Plus size={16} /> Add Target
+          </button>
+        </div>
+      </div>
+
+      {/* Expandable Department Dispatch Control Panel (Active when toggle switch is ON) */}
+      {isDeptDispatchEnabled && (
+        <div className="dept-dispatch-panel">
+          <div className="dept-dispatch-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Layers size={18} style={{ color: 'var(--primary-accent)' }} />
+              <div>
+                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>Department Email Campaign Controls</strong>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Dispatch phishing simulation emails to all members within a designated department at once.
+                </div>
+              </div>
+            </div>
+            <span className="badge badge-accent">
+              {deptPendingTargets.length} Targets Ready
+            </span>
+          </div>
+
+          <div className="dept-dispatch-body">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                Select Department:
+              </label>
+              <select 
+                value={deptDispatchTarget}
+                onChange={(e) => setDeptDispatchTarget(e.target.value)}
+                className="filter-select"
+                style={{ minWidth: '160px' }}
+              >
+                <option value="All">All Departments</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+
+              <button 
+                disabled={deptPendingTargets.length === 0}
+                onClick={() => {
+                  if (onSendDepartmentEmails) {
+                    onSendDepartmentEmails(deptDispatchTarget);
+                  }
+                }}
+                className="btn btn-accent"
+                style={{
+                  opacity: deptPendingTargets.length === 0 ? 0.5 : 1,
+                  cursor: deptPendingTargets.length === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <Zap size={14} /> Send Simulation Emails to All {deptDispatchTarget === 'All' ? 'Department' : deptDispatchTarget} Members ({deptPendingTargets.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Directory Filter Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
+          <input 
+            type="text" 
+            placeholder="Search by name or email..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+            style={{ paddingLeft: '36px' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Filter Scope:</span>
           <select 
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
@@ -162,11 +257,6 @@ export default function EmployeeDirectory({
               <option key={dept} value={dept}>{dept}</option>
             ))}
           </select>
-
-          {/* Add Employee Button */}
-          <button onClick={handleOpenAdd} className="btn btn-primary">
-            <Plus size={16} /> Add Target
-          </button>
         </div>
       </div>
 
@@ -178,15 +268,15 @@ export default function EmployeeDirectory({
               <th>Recipient Details</th>
               <th>Department</th>
               <th>Simulated Status</th>
-              <th>Test Actions</th>
+              <th>Simulation Controls</th>
               <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredEmployees.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#71717a', fontFamily: 'Share Tech Mono' }}>
-                  NO RECORD FOUND
+                <td colSpan="5" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                  No target records found matching filter criteria.
                 </td>
               </tr>
             ) : (
@@ -195,7 +285,7 @@ export default function EmployeeDirectory({
                   {/* Name and Email */}
                   <td>
                     <div className="emp-name-cell">
-                      <span style={{ fontWeight: '500' }}>{emp.name}</span>
+                      <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{emp.name}</span>
                       <span className="emp-email">{emp.email}</span>
                     </div>
                   </td>
@@ -217,15 +307,15 @@ export default function EmployeeDirectory({
                         <button 
                           onClick={() => onUpdateStatus(emp.id, 'Sent')}
                           className="sim-btn sent"
-                          title="Send phishing simulation email"
+                          title="Dispatch phishing email to employee"
                         >
-                          <Send size={11} style={{ marginRight: '4px', display: 'inline' }} /> Send Phishing Email
+                          <Send size={12} style={{ marginRight: '4px', display: 'inline' }} /> Send Phishing Email
                         </button>
                       ) : (
                         <button 
                           onClick={() => onUpdateStatus(emp.id, 'Pending')}
                           className="sim-btn"
-                          style={{ borderColor: 'rgba(113, 113, 122, 0.3)' }}
+                          style={{ borderColor: 'var(--border)' }}
                           title="Reset status back to Pending"
                         >
                           <RefreshCw size={11} style={{ marginRight: '4px', display: 'inline' }} /> Reset
@@ -233,20 +323,20 @@ export default function EmployeeDirectory({
                       )}
                       
                       {['Clicked', 'Compromised'].includes(emp.status) && (
-                        <span style={{ fontSize: '11px', color: '#ef4444', fontFamily: 'Share Tech Mono', alignSelf: 'center' }}>
-                          ⚠️ Vulnerable!
+                        <span style={{ fontSize: '11px', color: 'var(--danger-accent)', alignSelf: 'center', fontWeight: '500' }}>
+                          ⚠️ Vulnerable Target
                         </span>
                       )}
                       
                       {emp.status === 'Training Sent' && (
-                        <span style={{ fontSize: '11px', color: '#60a5fa', fontFamily: 'Share Tech Mono', alignSelf: 'center' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-accent)', alignSelf: 'center', fontWeight: '500' }}>
                           📬 Invite Dispatched
                         </span>
                       )}
 
                       {emp.status === 'Training Attended' && (
-                        <span style={{ fontSize: '11px', color: '#00ff00', fontFamily: 'Share Tech Mono', alignSelf: 'center' }}>
-                          ✅ Attended Training
+                        <span style={{ fontSize: '11px', color: 'var(--success-accent)', alignSelf: 'center', fontWeight: '500' }}>
+                          ✅ Training Attended
                         </span>
                       )}
                     </div>
@@ -258,7 +348,7 @@ export default function EmployeeDirectory({
                       <button 
                         onClick={() => handleOpenEdit(emp)}
                         className="btn btn-secondary btn-sm"
-                        style={{ padding: '6px' }}
+                        style={{ padding: '6px 10px' }}
                         title="Edit details"
                       >
                         <Edit2 size={12} />
@@ -266,7 +356,7 @@ export default function EmployeeDirectory({
                       <button 
                         onClick={() => onDeleteEmployee(emp.id)}
                         className="btn btn-danger-outline btn-sm"
-                        style={{ padding: '6px' }}
+                        style={{ padding: '6px 10px' }}
                         title="Delete employee"
                       >
                         <Trash2 size={12} />
@@ -286,17 +376,17 @@ export default function EmployeeDirectory({
           <div className="modal-content">
             <div className="modal-header">
               <h3 className="modal-title">
-                {modalMode === 'add' ? 'INITIALIZE NEW TARGET' : 'EDIT TARGET PROFILE'}
+                {modalMode === 'add' ? 'Add New Simulation Target' : 'Edit Target Details'}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="modal-close">
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
             
             <form onSubmit={handleSubmit}>
               {formError && (
-                <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '16px', fontFamily: 'Share Tech Mono' }}>
-                  [ERROR]: {formError}
+                <div style={{ color: 'var(--danger-accent)', fontSize: '13px', marginBottom: '16px' }}>
+                  {formError}
                 </div>
               )}
               
@@ -308,7 +398,7 @@ export default function EmployeeDirectory({
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   className="form-input"
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Jane Doe"
                   required
                 />
               </div>
@@ -346,7 +436,7 @@ export default function EmployeeDirectory({
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  {modalMode === 'add' ? 'Register' : 'Save Changes'}
+                  {modalMode === 'add' ? 'Save Target' : 'Update Profile'}
                 </button>
               </div>
             </form>

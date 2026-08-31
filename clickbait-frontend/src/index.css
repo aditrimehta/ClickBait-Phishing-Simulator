@@ -1,23 +1,31 @@
 :root {
-  --bg: #09090b;
-  --bg-darker: #050507;
-  --panel-bg: #121214;
-  --panel-hover: #18181b;
-  --neon-green: #00ff00;
-  --neon-green-glow: rgba(0, 255, 0, 0.15);
-  --neon-green-dim: rgba(0, 255, 0, 0.4);
-  --neon-green-subtle: rgba(0, 255, 0, 0.05);
+  /* Dark Office Palette: Sophisticated Midnight Charcoal & Deep Slate */
+  --bg: #0b0f17;
+  --bg-darker: #07090e;
+  --panel-bg: #111827;
+  --panel-hover: #1f2937;
   
-  --border: #1f1f23;
-  --border-glow: rgba(0, 255, 0, 0.25);
+  /* Accent Colors (Professional Slate / Steel Blue / Emerald) */
+  --primary-accent: #3b82f6; /* Corporate Slate Blue */
+  --primary-accent-glow: rgba(59, 130, 246, 0.15);
+  --primary-accent-dim: rgba(59, 130, 246, 0.4);
+  --primary-accent-subtle: rgba(59, 130, 246, 0.08);
   
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-neon: #00ff00;
+  --success-accent: #10b981; /* Formal Emerald */
+  --warning-accent: #f59e0b; /* Amber */
+  --danger-accent: #ef4444;  /* Crimson Red */
+
+  --border: #1f2937;
+  --border-light: #374151;
+  --border-glow: rgba(59, 130, 246, 0.2);
+  
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-accent: #60a5fa;
   
   --sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'Share Tech Mono', ui-monospace, monospace;
+  --mono: 'JetBrains Mono', 'Share Tech Mono', ui-monospace, monospace;
 
   font-family: var(--sans);
   background-color: var(--bg);
@@ -48,12 +56,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f1f23;
+  background: #1f2937;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-green-dim);
+  background: var(--primary-accent-dim);
 }
 
 /* Base resets & utilities */
@@ -61,12 +69,9 @@ body {
   box-sizing: border-box;
 }
 
-/* Neon text shadow utilities */
-.glow-text {
-  text-shadow: 0 0 8px var(--neon-green-dim);
-}
-
-.glow-border {
-  box-shadow: 0 0 10px var(--neon-green-glow);
-  border: 1px solid var(--neon-green);
+/* Subtle border utility */
+.glass-panel {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
 }
