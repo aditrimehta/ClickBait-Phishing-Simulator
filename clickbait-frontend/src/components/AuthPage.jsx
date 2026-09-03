@@ -1,5 +1,13 @@
+
 import React, { useState } from 'react';
-import { Terminal, Lock, Mail, User, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import {
+  Terminal,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  ShieldCheck
+} from 'lucide-react';
 
 export default function AuthPage({ onAuthenticated }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -7,32 +15,26 @@ export default function AuthPage({ onAuthenticated }) {
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
-    name: '',
     email: '',
-    password: '',
-    confirmPassword: ''
+    password: ''
   });
 
   const handleChange = (field) => (e) => {
-    setForm(prev => ({ ...prev, [field]: e.target.value }));
+    setForm(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+
     if (error) setError('');
   };
 
   const validate = () => {
-    if (!form.name.trim()) {
-      return 'Full name is required';
-    }
-
     if (!form.email.trim() || !form.email.includes('@')) {
       return 'Please enter a valid email address';
     }
 
-    if (!form.password || form.password.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-
-    if (form.password !== form.confirmPassword) {
-      return 'Passwords do not match';
+    if (!form.password) {
+      return 'Password is required';
     }
 
     return '';
@@ -52,12 +54,11 @@ export default function AuthPage({ onAuthenticated }) {
     setError('');
 
     // Temporary simulation.
-    // Replace this with your FastAPI admin creation API.
+    // Replace this with your FastAPI login API.
     setTimeout(() => {
       setLoading(false);
 
       onAuthenticated({
-        name: form.name,
         email: form.email
       });
     }, 700);
@@ -72,7 +73,9 @@ export default function AuthPage({ onAuthenticated }) {
         {/* Brand header */}
         <div className="auth-brand">
           <Terminal size={26} className="auth-brand-icon" />
-          <span className="auth-brand-text">PHISHGUARD</span>
+          <span className="auth-brand-text">
+            PHISHGUARD
+          </span>
         </div>
 
         <div className="auth-sub-brand">
@@ -82,11 +85,11 @@ export default function AuthPage({ onAuthenticated }) {
         <div className="auth-divider" />
 
         <h2 className="auth-title">
-          [ REGISTER ADMIN ]
+          [ AUTHENTICATE ]
         </h2>
 
         <p className="auth-subtitle">
-          Create a new administrator account
+          Enter credentials to access the security console
         </p>
 
         {error && (
@@ -97,25 +100,6 @@ export default function AuthPage({ onAuthenticated }) {
 
         <form onSubmit={handleSubmit}>
 
-          {/* Full Name */}
-          <div className="form-group">
-            <label className="form-label">
-              Full Name
-            </label>
-
-            <div className="auth-input-wrapper">
-              <User size={15} className="auth-input-icon" />
-
-              <input
-                type="text"
-                value={form.name}
-                onChange={handleChange('name')}
-                placeholder="e.g. Alice Vance"
-                className="auth-input"
-              />
-            </div>
-          </div>
-
           {/* Email */}
           <div className="form-group">
             <label className="form-label">
@@ -123,7 +107,10 @@ export default function AuthPage({ onAuthenticated }) {
             </label>
 
             <div className="auth-input-wrapper">
-              <Mail size={15} className="auth-input-icon" />
+              <Mail
+                size={15}
+                className="auth-input-icon"
+              />
 
               <input
                 type="email"
@@ -142,7 +129,10 @@ export default function AuthPage({ onAuthenticated }) {
             </label>
 
             <div className="auth-input-wrapper">
-              <Lock size={15} className="auth-input-icon" />
+              <Lock
+                size={15}
+                className="auth-input-icon"
+              />
 
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -154,7 +144,9 @@ export default function AuthPage({ onAuthenticated }) {
 
               <button
                 type="button"
-                onClick={() => setShowPassword(s => !s)}
+                onClick={() =>
+                  setShowPassword(s => !s)
+                }
                 className="auth-eye-toggle"
                 tabIndex={-1}
               >
@@ -167,37 +159,18 @@ export default function AuthPage({ onAuthenticated }) {
             </div>
           </div>
 
-          {/* Confirm Password */}
-          <div className="form-group">
-            <label className="form-label">
-              Confirm Password
-            </label>
-
-            <div className="auth-input-wrapper">
-              <Lock size={15} className="auth-input-icon" />
-
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={form.confirmPassword}
-                onChange={handleChange('confirmPassword')}
-                placeholder="••••••••"
-                className="auth-input"
-              />
-            </div>
-          </div>
-
-          {/* Submit */}
+          {/* Login button */}
           <button
             type="submit"
             className="auth-submit-btn"
             disabled={loading}
           >
             {loading ? (
-              'CREATING ACCOUNT...'
+              'AUTHENTICATING...'
             ) : (
               <>
                 <ShieldCheck size={16} />
-                CREATE ADMIN ACCOUNT
+                ENTER CONSOLE
               </>
             )}
           </button>
