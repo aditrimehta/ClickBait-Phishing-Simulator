@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import EmployeeDirectory from './components/EmployeeDirectory';
 import TrainingPortal from './components/TrainingPortal';
+import AuthPage from './components/AuthPage';
 import { RefreshCw } from 'lucide-react';
 import './App.css';
 
@@ -63,6 +64,12 @@ function App() {
     return saved ? JSON.parse(saved) : INITIAL_LOGS;
   });
 
+  // auth state, persisted so refresh doesn't log the admin out
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('phishguard_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   // Sync state to LocalStorage
   useEffect(() => {
     localStorage.setItem('phishguard_employees', JSON.stringify(employees));
@@ -71,6 +78,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem('phishguard_logs', JSON.stringify(logs));
   }, [logs]);
+
+    useEffect(() => {
+    if (user) {
+      localStorage.setItem('phishguard_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('phishguard_user');
+    }
+  }, [user]);
 
   // Helper to add logs with timestamps
   const addLog = (text) => {
@@ -248,6 +263,16 @@ function App() {
     }
   };
 
+    // 8. Logout
+  const handleLogout = () => {
+    setUser(null);
+  };
+
+  // block everything behind auth
+  if (!user) {
+    return <AuthPage onAuthenticated={setUser} />;
+  }
+
   return (
     <div className="app-container">
       {/* Navigation Sidebar */}
@@ -278,6 +303,17 @@ function App() {
           <div>
             <button onClick={handleResetAll} className="btn btn-secondary btn-sm" style={{ padding: '6px 12px' }}>
               <RefreshCw size={12} style={{ marginRight: '4px', display: 'inline' }} /> Clear Simulation State
+            </button>
+          </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: 'Share Tech Mono', fontSize: '12px', color: 'var(--text-muted)' }}>
+              {user.email}
+            </span>
+            <button onClick={handleResetAll} className="btn btn-secondary btn-sm" style={{ padding: '6px 12px' }}>
+              <RefreshCw size={12} style={{ marginRight: '4px', display: 'inline' }} /> Clear Simulation State
+            </button>
+            <button onClick={handleLogout} className="btn btn-danger-outline btn-sm" style={{ padding: '6px 12px' }}>
+              Logout
             </button>
           </div>
         </header>
