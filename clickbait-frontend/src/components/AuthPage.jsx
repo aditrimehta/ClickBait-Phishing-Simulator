@@ -40,29 +40,49 @@ export default function AuthPage({ onAuthenticated }) {
     return '';
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    const validationError = validate();
+  const validationError = validate();
 
-    if (validationError) {
-      setError(validationError);
-      return;
+  if (validationError) {
+    setError(validationError);
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+
+  try {
+    const response = await fetch(
+      'http://127.0.0.1:8000/admin/login',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Login failed');
     }
 
-    setLoading(true);
-    setError('');
+    // Login successful
+    onAuthenticated(data.admin);
 
-    // Temporary simulation.
-    // Replace this with your FastAPI login API.
-    setTimeout(() => {
-      setLoading(false);
-
-      onAuthenticated({
-        email: form.email
-      });
-    }, 700);
-  };
+  } catch (error) {
+    setError(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="auth-page">

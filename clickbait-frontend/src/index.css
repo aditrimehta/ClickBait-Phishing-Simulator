@@ -1,72 +1,64 @@
-:root {
-  --bg: #09090b;
-  --bg-darker: #050507;
-  --panel-bg: #121214;
-  --panel-hover: #18181b;
-  --neon-green: #00ff00;
-  --neon-green-glow: rgba(0, 255, 0, 0.15);
-  --neon-green-dim: rgba(0, 255, 0, 0.4);
-  --neon-green-subtle: rgba(0, 255, 0, 0.05);
-  
-  --border: #1f1f23;
-  --border-glow: rgba(0, 255, 0, 0.25);
-  
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-neon: #00ff00;
-  
-  --sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'Share Tech Mono', ui-monospace, monospace;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+:root {
+  /* Backgrounds */
+  --bg: #f5f7fa;
+  --bg-darker: #eef1f5;
+  --panel-bg: #ffffff;
+  --panel-hover: #f8fafc;
+
+  /* Primary accent */
+  --primary: #2563eb;
+  --primary-glow: rgba(37, 99, 235, 0.12);
+  --primary-dim: rgba(37, 99, 235, 0.35);
+  --primary-subtle: rgba(37, 99, 235, 0.06);
+
+  /* Existing variable aliases */
+  --neon-green: var(--primary);
+  --neon-green-glow: var(--primary-glow);
+  --neon-green-dim: var(--primary-dim);
+  --neon-green-subtle: var(--primary-subtle);
+
+  /* Borders */
+  --border: #e2e8f0;
+  --border-glow: rgba(37, 99, 235, 0.20);
+
+  /* Text */
+  --text-primary: #172033;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-neon: var(--primary);
+
+  /* Status colors */
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+
+  /* Fonts */
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+  /* Base */
   font-family: var(--sans);
   background-color: var(--bg);
   color: var(--text-primary);
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--bg);
-  color: var(--text-primary);
-  overflow-x: hidden;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-darker);
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1f1f23;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--neon-green-dim);
-}
-
-/* Base resets & utilities */
 * {
-  box-sizing: border-box;
+  font-family: var(--sans);
 }
 
-/* Neon text shadow utilities */
-.glow-text {
-  text-shadow: 0 0 8px var(--neon-green-dim);
-}
-
-.glow-border {
-  box-shadow: 0 0 10px var(--neon-green-glow);
-  border: 1px solid var(--neon-green);
+code,
+pre,
+.timestamp,
+.log-entry,
+.campaign-id {
+  font-family: var(--mono);
 }
