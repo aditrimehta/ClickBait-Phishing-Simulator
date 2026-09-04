@@ -21,7 +21,53 @@ app.add_middleware(
 clicks = []
 
 password_hash = PasswordHash.recommended()
+@app.get("/employees")
+def get_employees():
+    conn = get_connection()
+    cursor = conn.cursor()
 
+    try:
+        cursor.execute(
+            """
+            SELECT
+                e.employee_id,
+                e.employee_number,
+                e.name,
+                e.email,
+                e.dept_id,
+                d.name AS department
+            FROM employee e
+            JOIN departments d
+                ON e.dept_id = d.dept_id
+            ORDER BY e.employee_number;
+            """
+        )
+
+        rows = cursor.fetchall()
+
+        employees = [
+            {
+                "id": str(row[0]),
+                "employee_number": (
+                    f"{row[1]:03d}"
+                    if row[1] is not None
+                    else None
+                ),
+                "name": row[2],
+                "email": row[3],
+                "dept_id": str(row[4]),
+                "department": row[5],
+                "status": "Pending",
+                "phishOutcome": None
+            }
+            for row in rows
+        ]
+
+        return employees
+
+    finally:
+        cursor.close()
+        conn.close()
 
 class LoginRequest(BaseModel):
     email: str
