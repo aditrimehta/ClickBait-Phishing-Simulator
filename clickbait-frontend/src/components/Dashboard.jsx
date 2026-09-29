@@ -3,14 +3,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
-import { Mail, MousePointer, ShieldAlert, BookOpen, Activity, Briefcase } from 'lucide-react';
+import { Mail, MousePointer, BookOpen, Activity, Briefcase } from 'lucide-react';
 
 export default function Dashboard({ employees = [] }) {
   const totalEmployees = employees.length;
-  
-  // Status definitions:
-  // - status: 'Pending', 'Sent', 'Clicked', 'Compromised', 'Training Sent', 'Training Attended'
-  // - phishOutcome: 'Clicked' or 'Compromised' or null
   
   const sentEmployees = employees.filter(e => e.status !== 'Pending');
   const clickedEmployees = employees.filter(e => e.phishOutcome === 'Clicked' || e.phishOutcome === 'Compromised');
@@ -23,14 +19,13 @@ export default function Dashboard({ employees = [] }) {
   const totalTrained = trainedEmployees.length;
 
   const clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : '0.0';
-  const compromiseRate = totalSent > 0 ? ((totalCompromised / totalSent) * 100).toFixed(1) : '0.0';
   const trainingRate = totalClicked > 0 ? ((totalTrained / totalClicked) * 100).toFixed(1) : '0.0';
 
   // 1. Data for Conversion Funnel Chart (Sent -> Clicked -> Compromised)
   const funnelData = [
-    { name: 'Emails Sent', count: totalSent },
-    { name: 'Link Clicked', count: totalClicked },
-    { name: 'Creds Entered', count: totalCompromised }
+    { name: 'Emails Dispatched', count: totalSent },
+    { name: 'Links Clicked', count: totalClicked },
+    { name: 'Credentials Submitted', count: totalCompromised }
   ];
 
   // 2. Data for Department Breakdown (Vulnerable counts)
@@ -42,10 +37,11 @@ export default function Dashboard({ employees = [] }) {
   }).filter(item => item.value > 0);
 
   const departmentData = departmentDataMap.length > 0 ? departmentDataMap : [
-    { name: 'Secure', value: 1 }
+    { name: 'All Secure', value: 1 }
   ];
 
-  const DEPT_COLORS = ['#00ff00', '#00cc00', '#009900', '#006600', '#eab308', '#ef4444', '#3b82f6'];
+  // Formal office color palette for departments
+  const DEPT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#64748b'];
 
   // 3. Area trend chart data
   const trendData = [
@@ -61,7 +57,7 @@ export default function Dashboard({ employees = [] }) {
     if (active && payload && payload.length) {
       return (
         <div className="custom-tooltip">
-          <p className="label" style={{ color: '#00ff00', fontWeight: 'bold', marginBottom: '5px' }}>{label}</p>
+          <p className="label" style={{ color: 'var(--primary-accent)', fontWeight: '600', marginBottom: '4px' }}>{label}</p>
           {payload.map((p, idx) => (
             <p key={idx} style={{ color: p.color || p.fill || '#fff', fontSize: '12px' }}>
               {`${p.name}: ${p.value}`}
@@ -76,7 +72,7 @@ export default function Dashboard({ employees = [] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* 3 KPI cards */}
+      {/* 3 Executive KPI cards */}
       <div className="dashboard-grid">
         <div className="kpi-card sent">
           <div className="kpi-header">
@@ -91,33 +87,33 @@ export default function Dashboard({ employees = [] }) {
 
         <div className="kpi-card clicked">
           <div className="kpi-header">
-            <span className="kpi-title">Fell for Phishing (Clicks)</span>
-            <MousePointer className="kpi-icon" size={20} style={{ color: '#ef4444' }} />
+            <span className="kpi-title">Vulnerable Clickers</span>
+            <MousePointer className="kpi-icon" size={20} style={{ color: 'var(--danger-accent)' }} />
           </div>
-          <div className="kpi-value" style={{ color: totalClicked > 0 ? '#ef4444' : 'inherit' }}>
+          <div className="kpi-value" style={{ color: totalClicked > 0 ? 'var(--danger-accent)' : 'inherit' }}>
             {totalClicked}
           </div>
           <div className="kpi-subtext">
-            <span style={{ color: totalClicked > 0 ? '#ef4444' : 'inherit' }}>
-              {clickRate}% Link-Click Rate
+            <span style={{ color: totalClicked > 0 ? 'var(--danger-accent)' : 'inherit', fontWeight: '500' }}>
+              {clickRate}% Click-Through Rate
             </span>
           </div>
         </div>
 
         <div className="kpi-card training">
           <div className="kpi-header">
-            <span className="kpi-title">Attended Training</span>
-            <BookOpen className="kpi-icon" size={20} style={{ color: '#00ff00' }} />
+            <span className="kpi-title">Training Completed</span>
+            <BookOpen className="kpi-icon" size={20} style={{ color: 'var(--success-accent)' }} />
           </div>
-          <div className="kpi-value neon">
+          <div className="kpi-value" style={{ color: 'var(--success-accent)' }}>
             {totalTrained}
           </div>
           <div className="kpi-subtext">
-            <span style={{ color: '#00ff00' }}>
-              {trainingRate}% Training Rate
+            <span style={{ color: 'var(--success-accent)', fontWeight: '500' }}>
+              {trainingRate}% Remediation Rate
             </span>
-            <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>
-              (out of clickers)
+            <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>
+              (of phished users)
             </span>
           </div>
         </div>
@@ -136,31 +132,29 @@ export default function Dashboard({ employees = [] }) {
                 data={funnelData}
                 margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f1f23" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#a1a1aa" 
+                  stroke="#9ca3af" 
                   fontSize={12} 
                   tickLine={false} 
-                  fontFamily="Share Tech Mono"
                 />
                 <YAxis 
-                  stroke="#a1a1aa" 
+                  stroke="#9ca3af" 
                   fontSize={12} 
                   tickLine={false} 
                   allowDecimals={false}
-                  fontFamily="Share Tech Mono"
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                 <Bar 
                   dataKey="count" 
-                  radius={[4, 4, 0, 0]}
+                  radius={[6, 6, 0, 0]}
                   maxBarSize={60}
                 >
                   {funnelData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={entry.name === 'Creds Entered' ? '#ef4444' : entry.name === 'Link Clicked' ? '#ff3b3b' : '#00ff00'} 
+                      fill={entry.name === 'Credentials Submitted' ? '#ef4444' : entry.name === 'Links Clicked' ? '#f59e0b' : '#3b82f6'} 
                     />
                   ))}
                 </Bar>
@@ -176,9 +170,9 @@ export default function Dashboard({ employees = [] }) {
           </h3>
           <div className="chart-wrapper">
             {departmentDataMap.length === 0 ? (
-              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#71717a' }}>
-                <Briefcase size={32} style={{ marginBottom: '10px', color: '#1f1f23' }} />
-                <p style={{ fontSize: '13px', fontFamily: 'Share Tech Mono' }}>NO RECORDS REGISTERED YET</p>
+              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: 'var(--text-muted)' }}>
+                <Briefcase size={32} style={{ marginBottom: '10px', opacity: 0.4 }} />
+                <p style={{ fontSize: '13px' }}>No vulnerabilities detected yet</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -198,11 +192,11 @@ export default function Dashboard({ employees = [] }) {
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
                   <foreignObject x="0" y="0" width="100%" height="30">
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '11px', fontFamily: 'Share Tech Mono' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '11px' }}>
                       {departmentData.map((entry, index) => (
                         <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: DEPT_COLORS[index % DEPT_COLORS.length], borderRadius: '50%' }}></span>
-                          <span style={{ color: '#a1a1aa' }}>{entry.name}: {entry.value}</span>
+                          <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: DEPT_COLORS[index % DEPT_COLORS.length], borderRadius: '50%' }}></span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{entry.name}: {entry.value}</span>
                         </div>
                       ))}
                     </div>
@@ -217,7 +211,7 @@ export default function Dashboard({ employees = [] }) {
       {/* Trend Area Chart */}
       <div className="chart-card">
         <h3 className="chart-title">
-          <Activity size={18} /> Phishing Timeline Trend
+          <Activity size={18} /> Simulation Timeline Trend
         </h3>
         <div className="chart-wrapper" style={{ height: '200px' }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -227,20 +221,20 @@ export default function Dashboard({ employees = [] }) {
             >
               <defs>
                 <linearGradient id="colorSent" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00ff00" stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor="#00ff00" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorClicked" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15}/>
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f1f23" vertical={false} />
-              <XAxis dataKey="time" stroke="#a1a1aa" fontSize={11} tickLine={false} fontFamily="Share Tech Mono" />
-              <YAxis stroke="#a1a1aa" fontSize={11} tickLine={false} allowDecimals={false} fontFamily="Share Tech Mono" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="time" stroke="#9ca3af" fontSize={11} tickLine={false} />
+              <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} allowDecimals={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="sent" name="Sent" stroke="#00ff00" fillOpacity={1} fill="url(#colorSent)" strokeWidth={2} />
-              <Area type="monotone" dataKey="clicked" name="Clicked/Creds" stroke="#ef4444" fillOpacity={1} fill="url(#colorClicked)" strokeWidth={2} />
+              <Area type="monotone" dataKey="sent" name="Dispatched" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSent)" strokeWidth={2} />
+              <Area type="monotone" dataKey="clicked" name="Vulnerable (Clicks)" stroke="#ef4444" fillOpacity={1} fill="url(#colorClicked)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
