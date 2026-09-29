@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -21,6 +21,10 @@ const DEMO_LOGS = [
   }
 ];
 
+// How often to re-fetch employees to pick up link clicks that happen
+// outside the app (someone opening the email later and clicking).
+const POLL_INTERVAL_MS = 5000;
+
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -41,34 +45,50 @@ function App() {
 
   const [logs] = useState(DEMO_LOGS);
 
-  // Load employees from FastAPI
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
+  // Ref so the polling interval always calls the latest version of
+  // refreshEmployees without needing to reset the interval on every render.
+  const refreshEmployeesRef = useRef();
 
-    const loadEmployees = async () => {
-      try {
-        setLoadingEmployees(true);
-        setEmployeeError('');
+  const refreshEmployees = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoadingEmployees(true);
+    setEmployeeError('');
 
-        const data = await getEmployees();
-
-        console.log('Employees received from backend:', data);
-
-        setEmployees(data);
-      } catch (error) {
-        console.error('Employee loading error:', error);
-        setEmployeeError(
-          'Unable to load employees from the database.'
-        );
+    try {
+      const data = await getEmployees();
+      setEmployees(data);
+    } catch (error) {
+      console.error('Employee loading error:', error);
+      // Don't blow away existing data or show an error banner for a
+      // background poll failure — only surface it on the initial load.
+      if (!silent) {
+        setEmployeeError('Unable to load employees from the database.');
         setEmployees([]);
-      } finally {
-        setLoadingEmployees(false);
       }
-    };
+    } finally {
+      if (!silent) setLoadingEmployees(false);
+    }
+  }, []);
 
-    loadEmployees();
+  useEffect(() => {
+    refreshEmployeesRef.current = refreshEmployees;
+  }, [refreshEmployees]);
+
+  // Initial load
+  useEffect(() => {
+    if (!user) return;
+    refreshEmployees();
+  }, [user, refreshEmployees]);
+
+  // Poll in the background so clicked-link status shows up without
+  // needing a manual refresh.
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      refreshEmployeesRef.current?.({ silent: true });
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleAuthenticated = (admin) => {
@@ -195,6 +215,7 @@ function App() {
           <EmployeeDirectory
             employees={employees}
             loading={loadingEmployees}
+            onSimulationSent={() => refreshEmployees({ silent: true })}
           />
         )}
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Send,
@@ -7,24 +7,12 @@ import {
   X
 } from 'lucide-react';
 
-const DEMO_TEMPLATES = [
-  {
-    id: 'password-reset',
-    name: 'Password Reset'
-  },
-  {
-    id: 'invoice',
-    name: 'Invoice Notification'
-  },
-  {
-    id: 'security-alert',
-    name: 'Security Alert'
-  }
-];
+const API_BASE = 'http://localhost:8000';
 
 export default function EmployeeDirectory({
   employees = [],
-  loading = false
+  loading = false,
+  onSimulationSent
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
@@ -35,6 +23,31 @@ export default function EmployeeDirectory({
   const [sendEmployeeId, setSendEmployeeId] = useState('');
   const [sendDepartment, setSendDepartment] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
+
+  // Email templates, fetched from the backend
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState(null);
+
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
+  const [sendSuccess, setSendSuccess] = useState(null);
+
+  useEffect(() => {
+    if (!isSendModalOpen) return;
+
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+
+    fetch(`${API_BASE}/templates`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load templates');
+        return res.json();
+      })
+      .then((data) => setTemplates(data))
+      .catch((err) => setTemplatesError(err.message))
+      .finally(() => setTemplatesLoading(false));
+  }, [isSendModalOpen]);
 
   // Get departments from database employees
   const departments = [
@@ -54,10 +67,10 @@ export default function EmployeeDirectory({
     );
 
     const matchesSearch =
-  emp.name?.toLowerCase().includes(search) ||
-  emp.email?.toLowerCase().includes(search) ||
-  emp.employee_number?.includes(search);
-  
+      emp.name?.toLowerCase().includes(search) ||
+      emp.email?.toLowerCase().includes(search) ||
+      emp.employee_number?.includes(search);
+
     const matchesDept =
       selectedDept === 'All' ||
       emp.department === selectedDept;
@@ -75,9 +88,11 @@ export default function EmployeeDirectory({
 
   const closeSendModal = () => {
     setIsSendModalOpen(false);
+    setSendError(null);
+    setSendSuccess(null);
   };
 
-  const handleSendSimulation = (e) => {
+  const handleSendSimulation = async (e) => {
     e.preventDefault();
 
     if (!selectedTemplate) return;
@@ -96,38 +111,50 @@ export default function EmployeeDirectory({
       return;
     }
 
-    /*
-      Backend connection will be added here.
+    setSending(true);
+    setSendError(null);
+    setSendSuccess(null);
 
-      Individual:
-      {
-        type: 'individual',
-        employee_number: sendEmployeeId,
-        template_id: selectedTemplate
+    try {
+      const response = await fetch(`${API_BASE}/send-simulation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: sendMode,
+          employee_number:
+            sendMode === 'individual'
+              ? sendEmployeeId
+              : null,
+          department:
+            sendMode === 'department'
+              ? sendDepartment
+              : null,
+          template_id: selectedTemplate
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to send simulation');
       }
 
-      Department:
-      {
-        type: 'department',
-        department: sendDepartment,
-        template_id: selectedTemplate
-      }
-    */
+      setSendSuccess(data.message);
 
-    console.log('Simulation request:', {
-      type: sendMode,
-      employee_number:
-        sendMode === 'individual'
-          ? sendEmployeeId
-          : null,
-      department:
-        sendMode === 'department'
-          ? sendDepartment
-          : null,
-      template_id: selectedTemplate
-    });
+      // pull the just-sent employee's status into the parent's
+      // employees list right away, instead of waiting for the next poll
+      onSimulationSent?.();
 
-    closeSendModal();
+      // brief pause so the user sees the confirmation before the modal closes
+      setTimeout(() => {
+        closeSendModal();
+      }, 1200);
+
+    } catch (err) {
+      setSendError(err.message);
+    } finally {
+      setSending(false);
+    }
   };
 
   const renderStatusBadge = (status) => {
@@ -500,12 +527,15 @@ export default function EmployeeDirectory({
                   }
                   className="form-select"
                   required
+                  disabled={templatesLoading}
                 >
                   <option value="">
-                    Select email template
+                    {templatesLoading
+                      ? 'Loading templates...'
+                      : 'Select email template'}
                   </option>
 
-                  {DEMO_TEMPLATES.map(
+                  {templates.map(
                     (template) => (
                       <option
                         key={template.id}
@@ -517,6 +547,18 @@ export default function EmployeeDirectory({
                   )}
 
                 </select>
+
+                {templatesError && (
+                  <small
+                    style={{
+                      color: 'var(--status-danger, #e5484d)',
+                      display: 'block',
+                      marginTop: '6px'
+                    }}
+                  >
+                    Couldn't load templates: {templatesError}
+                  </small>
+                )}
 
               </div>
 
@@ -538,6 +580,39 @@ export default function EmployeeDirectory({
                 simulation is dispatched.
               </div>
 
+              {/* Send status */}
+              {sendError && (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    marginBottom: '12px',
+                    background: 'rgba(229, 72, 77, 0.1)',
+                    border: '1px solid var(--status-danger, #e5484d)',
+                    borderRadius: '6px',
+                    color: 'var(--status-danger, #e5484d)',
+                    fontSize: '13px'
+                  }}
+                >
+                  {sendError}
+                </div>
+              )}
+
+              {sendSuccess && (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    marginBottom: '12px',
+                    background: 'rgba(46, 125, 50, 0.1)',
+                    border: '1px solid #2e7d32',
+                    borderRadius: '6px',
+                    color: '#2e7d32',
+                    fontSize: '13px'
+                  }}
+                >
+                  {sendSuccess}
+                </div>
+              )}
+
               {/* Footer */}
               <div className="modal-footer">
 
@@ -545,6 +620,7 @@ export default function EmployeeDirectory({
                   type="button"
                   onClick={closeSendModal}
                   className="btn btn-secondary"
+                  disabled={sending}
                 >
                   Cancel
                 </button>
@@ -552,9 +628,10 @@ export default function EmployeeDirectory({
                 <button
                   type="submit"
                   className="btn btn-primary"
+                  disabled={sending || templatesLoading}
                 >
                   <Send size={14} />
-                  Send Simulation
+                  {sending ? 'Sending...' : 'Send Simulation'}
                 </button>
 
               </div>
