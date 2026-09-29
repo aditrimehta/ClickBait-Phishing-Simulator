@@ -9,6 +9,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
+from fastapi.responses import HTMLResponse
 
 load_dotenv()
 
@@ -475,3 +476,485 @@ def send_email(to_email, subject, html_body):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
+
+# =========================================================
+# TRAINING
+# =========================================================
+
+
+@app.get("/training")
+def get_training():
+    """
+    Returns employees who clicked a phishing simulation,
+    together with their latest training status.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT
+                e.employee_id,
+                e.employee_number,
+                e.name,
+                e.email,
+                d.name AS department,
+
+                sl.status AS simulation_status,
+                sl.clicked_at,
+
+                tl.status AS training_status,
+                tl.sent_at AS training_sent_at,
+                tl.completed_at
+
+            FROM employee e
+
+            JOIN departments d
+                ON e.dept_id = d.dept_id
+
+            JOIN LATERAL (
+                SELECT
+                    status,
+                    clicked_at,
+                    sent_at
+                FROM simulation_log
+                WHERE employee_id = e.employee_id
+                  AND status = 'clicked'
+                ORDER BY sent_at DESC
+                LIMIT 1
+            ) sl ON TRUE
+
+            LEFT JOIN LATERAL (
+                SELECT
+                    status,
+                    sent_at,
+                    completed_at
+                FROM training_log
+                WHERE employee_id = e.employee_id
+                ORDER BY sent_at DESC
+                LIMIT 1
+            ) tl ON TRUE
+
+            ORDER BY e.employee_number;
+            """
+        )
+
+        rows = cursor.fetchall()
+
+        employees = []
+
+        for row in rows:
+            employees.append({
+                "employee_id": str(row[0]),
+                "employee_number": (
+                    f"{row[1]:03d}"
+                    if row[1] is not None
+                    else None
+                ),
+                "name": row[2],
+                "email": row[3],
+                "department": row[4],
+
+                "simulation_status": row[5],
+                "clicked_at": (
+                    row[6].isoformat()
+                    if row[6]
+                    else None
+                ),
+
+                "training_status": row[7],
+                "training_sent_at": (
+                    row[8].isoformat()
+                    if row[8]
+                    else None
+                ),
+                "completed_at": (
+                    row[9].isoformat()
+                    if row[9]
+                    else None
+                )
+            })
+
+        return employees
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# =========================================================
+# SEND TRAINING INVITATION
+# =========================================================
+
+
+@app.post("/send-training/{employee_number}")
+def send_training(employee_number: str):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        # -------------------------------------------------
+        # 1. Convert employee number
+        # -------------------------------------------------
+
+        try:
+            employee_number_int = int(employee_number)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Employee number must be numeric"
+            )
+
+
+        # -------------------------------------------------
+        # 2. Find employee
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                employee_id,
+                employee_number,
+                name,
+                email
+            FROM employee
+            WHERE employee_number = %s;
+            """,
+            (employee_number_int,)
+        )
+
+        employee_row = cursor.fetchone()
+
+        if not employee_row:
+            raise HTTPException(
+                status_code=404,
+                detail="Employee not found"
+            )
+
+
+        employee_id = str(employee_row[0])
+        employee_number_value = employee_row[1]
+        employee_name = employee_row[2]
+        employee_email = employee_row[3]
+
+
+        # -------------------------------------------------
+        # 3. Get training email template
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                template_id,
+                subject,
+                html_body
+            FROM training_template
+            ORDER BY created_at DESC
+            LIMIT 1;
+            """
+        )
+
+        template_row = cursor.fetchone()
+
+        if not template_row:
+            raise HTTPException(
+                status_code=404,
+                detail="Training email template not found"
+            )
+
+
+        template_id = str(template_row[0])
+        subject = template_row[1]
+        html_body = template_row[2]
+
+
+        # -------------------------------------------------
+        # 4. Create training record first
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            INSERT INTO training_log (
+                employee_id,
+                template_id,
+                status
+            )
+            VALUES (%s, %s, 'sent')
+            RETURNING training_id;
+            """,
+            (
+                employee_id,
+                template_id
+            )
+        )
+
+        training_id = cursor.fetchone()[0]
+
+
+        # -------------------------------------------------
+        # 5. Create unique training confirmation link
+        # -------------------------------------------------
+
+        training_link = (
+            f"{BASE_URL}/training/confirm/{training_id}"
+        )
+
+
+        # -------------------------------------------------
+        # 6. Replace email placeholders
+        # -------------------------------------------------
+
+        rendered_html = html_body
+
+        rendered_html = rendered_html.replace(
+            "{{name}}",
+            employee_name
+        )
+
+        rendered_html = rendered_html.replace(
+            "{{employee_email}}",
+            employee_email
+        )
+
+        rendered_html = rendered_html.replace(
+            "{{company_name}}",
+            COMPANY_NAME
+        )
+
+        rendered_html = rendered_html.replace(
+            "{{training_link}}",
+            training_link
+        )
+
+
+        # -------------------------------------------------
+        # 7. Send email
+        # -------------------------------------------------
+
+        try:
+
+            send_email(
+                employee_email,
+                subject,
+                rendered_html
+            )
+
+        except Exception as e:
+
+            # Remove training record if sending failed
+
+            cursor.execute(
+                """
+                DELETE FROM training_log
+                WHERE training_id = %s;
+                """,
+                (training_id,)
+            )
+
+            conn.commit()
+
+            print(
+                f"[TRAINING SEND FAILED] "
+                f"{employee_email}: {e}"
+            )
+
+            raise HTTPException(
+                status_code=500,
+                detail=f"Training email failed to send: {e}"
+            )
+
+
+        # -------------------------------------------------
+        # 8. Save everything
+        # -------------------------------------------------
+
+        conn.commit()
+
+
+        return {
+            "message": "Training invitation sent successfully.",
+            "training_id": str(training_id),
+            "employee": {
+                "employee_id": employee_id,
+                "employee_number": (
+                    f"{employee_number_value:03d}"
+                    if employee_number_value is not None
+                    else None
+                ),
+                "name": employee_name,
+                "email": employee_email
+            }
+        }
+
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        conn.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {e}"
+        )
+
+    finally:
+
+        cursor.close()
+        conn.close()
+
+
+# =========================================================
+# TRAINING CONFIRMATION
+# =========================================================
+
+
+@app.get(
+    "/training/confirm/{training_id}",
+    response_class=HTMLResponse
+)
+def confirm_training(training_id: str):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            UPDATE training_log
+            SET
+                status = 'completed',
+                completed_at = NOW()
+            WHERE training_id = %s
+              AND status = 'sent'
+            RETURNING training_id;
+            """,
+            (training_id,)
+        )
+
+        result = cursor.fetchone()
+
+        conn.commit()
+
+        if not result:
+
+            return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Training Already Completed</title>
+            </head>
+
+            <body
+                style="
+                    margin:0;
+                    padding:40px;
+                    background:#eef2f6;
+                    font-family:Arial, sans-serif;
+                "
+            >
+
+                <div
+                    style="
+                        max-width:560px;
+                        margin:60px auto;
+                        padding:35px;
+                        background:#ffffff;
+                        border:1px solid #d7dde5;
+                        text-align:center;
+                    "
+                >
+
+                    <h2 style="color:#172033;">
+                        Training Already Completed
+                    </h2>
+
+                    <p style="color:#475569; line-height:1.7;">
+                        This training invitation has already been
+                        completed.
+                    </p>
+
+                </div>
+
+            </body>
+            </html>
+            """
+
+
+        return """
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+            <title>Training Completed</title>
+        </head>
+
+        <body
+            style="
+                margin:0;
+                padding:40px;
+                background:#eef2f6;
+                font-family:Arial, sans-serif;
+            "
+        >
+
+            <div
+                style="
+                    max-width:560px;
+                    margin:60px auto;
+                    padding:35px;
+                    background:#ffffff;
+                    border:1px solid #d7dde5;
+                    text-align:center;
+                "
+            >
+
+                <div
+                    style="
+                        font-size:42px;
+                        margin-bottom:15px;
+                    "
+                >
+                    ✓
+                </div>
+
+                <h2 style="color:#172033;">
+                    Training Completed
+                </h2>
+
+                <p
+                    style="
+                        color:#475569;
+                        line-height:1.7;
+                    "
+                >
+                    Thank you. Your security awareness
+                    training has been marked as completed.
+                </p>
+
+                <p
+                    style="
+                        color:#94a3b8;
+                        font-size:12px;
+                    "
+                >
+                    You may close this window.
+                </p>
+
+            </div>
+
+        </body>
+
+        </html>
+        """
+
+    finally:
+
+        cursor.close()
+        conn.close()

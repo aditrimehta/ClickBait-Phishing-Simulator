@@ -219,13 +219,9 @@ function App() {
           />
         )}
 
-        {/* Training */}
         {activeTab === 'training' && (
-          <TrainingPortal
-            employees={employees}
-            logs={logs}
-          />
-        )}
+    <TrainingPortal  logs={logs} />
+)}
 
       </div>
     </div>
