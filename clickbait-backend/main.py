@@ -64,7 +64,9 @@ def get_employees():
             SELECT DISTINCT ON (employee_id)
                 employee_id, status
             FROM simulation_log
-            ORDER BY employee_id, sent_at DESC;
+            ORDER BY employee_id,
+                     (status = 'clicked') DESC,
+                     sent_at DESC;
             """
         )
         latest_status_rows = cursor.fetchall()
@@ -72,12 +74,26 @@ def get_employees():
             str(r[0]): r[1] for r in latest_status_rows
         }
 
+        cursor.execute(
+            """
+            SELECT DISTINCT employee_id
+            FROM training_log
+            WHERE status = 'completed';
+            """
+        )
+        completed_training_employee_ids = {
+            str(r[0]) for r in cursor.fetchall()
+        }
+
         employees = []
         for row in rows:
             employee_id = str(row[0])
             log_status = latest_status_by_employee.get(employee_id)
 
-            if log_status == "clicked":
+            if employee_id in completed_training_employee_ids:
+                status = "Training Attended"
+                phish_outcome = "Clicked"
+            elif log_status == "clicked":
                 status = "Clicked"
                 phish_outcome = "Clicked"
             elif log_status == "sent":
@@ -368,7 +384,88 @@ def test_db():
 
     return {"database_time": result[0]}
 
-@app.get("/track/{campaign_id}/{employee_id}")
+def render_reveal_page(employee_name, subject):
+    """
+    The page shown when someone clicks the tracking link in a
+    simulated phishing email. Reveal only — no tips here, those
+    live in the separate follow-up training email.
+    """
+    safe_name = employee_name or "there"
+    safe_subject = subject or "this email"
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You've been phished — Security Awareness Simulation</title>
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f172a;
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 24px;
+  }}
+  .card {{
+    background-color: #ffffff;
+    border-radius: 10px;
+    max-width: 480px;
+    width: 100%;
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }}
+  .icon {{
+    font-size: 48px;
+    margin-bottom: 16px;
+  }}
+  h1 {{
+    color: #b91c1c;
+    font-size: 22px;
+    margin: 0 0 16px 0;
+  }}
+  p {{
+    color: #333333;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 12px 0;
+  }}
+  .pretext {{
+    display: inline-block;
+    background-color: #f4f4f7;
+    color: #555555;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    margin-top: 8px;
+  }}
+  .footer {{
+    margin-top: 24px;
+    font-size: 12px;
+    color: #999999;
+  }}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🎣</div>
+    <h1>You just got phished!</h1>
+    <p>Hi {safe_name}, this was a simulated phishing exercise sent by
+       {COMPANY_NAME} Security to help strengthen our team's awareness.</p>
+    <p>No real data was collected and nothing about your account was affected.</p>
+    <div class="pretext">You clicked a link from: &ldquo;{safe_subject}&rdquo;</div>
+    <div class="footer">{COMPANY_NAME} Security Awareness Program</div>
+  </div>
+</body>
+</html>"""
+
+
+@app.get("/track/{campaign_id}/{employee_id}", response_class=HTMLResponse)
 def track_click(
     campaign_id: str,
     employee_id: str,
@@ -376,7 +473,8 @@ def track_click(
 ):
     """
     campaign_id here is actually the template_id (see render_template).
-    Flips the most recent matching simulation_log row to 'clicked'.
+    Flips the most recent matching simulation_log row to 'clicked' and
+    shows the reveal page in the browser.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -397,9 +495,17 @@ def track_click(
         )
         conn.commit()
 
-        return {
-            "message": "Training activity recorded."
-        }
+        # pull the employee's name + template subject to personalize the page
+        cursor.execute("SELECT name FROM employee WHERE employee_id = %s;", (employee_id,))
+        emp_row = cursor.fetchone()
+        employee_name = emp_row[0] if emp_row else None
+
+        cursor.execute("SELECT subject FROM email_template WHERE template_id = %s;", (campaign_id,))
+        subj_row = cursor.fetchone()
+        subject = subj_row[0] if subj_row else None
+
+        return render_reveal_page(employee_name, subject)
+
     finally:
         cursor.close()
         conn.close()
@@ -441,6 +547,93 @@ def dashboard():
     finally:
         cursor.close()
         conn.close()
+
+
+
+@app.get("/track/{campaign_id}/{employee_id}", response_class=HTMLResponse)
+def track_click(
+    campaign_id: str,
+    employee_id: str,
+    request: Request
+):
+    """
+    campaign_id here is actually the template_id (see render_template).
+    Flips the most recent matching simulation_log row to 'clicked' and
+    shows the reveal page in the browser.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            UPDATE simulation_log
+            SET status = 'clicked', clicked_at = NOW()
+            WHERE log_id = (
+                SELECT log_id FROM simulation_log
+                WHERE employee_id = %s AND template_id = %s
+                ORDER BY sent_at DESC
+                LIMIT 1
+            );
+            """,
+            (employee_id, campaign_id)
+        )
+        conn.commit()
+
+        # pull the employee's name + template subject to personalize the page
+        cursor.execute("SELECT name FROM employee WHERE employee_id = %s;", (employee_id,))
+        emp_row = cursor.fetchone()
+        employee_name = emp_row[0] if emp_row else None
+
+        cursor.execute("SELECT subject FROM email_template WHERE template_id = %s;", (campaign_id,))
+        subj_row = cursor.fetchone()
+        subject = subj_row[0] if subj_row else None
+
+        return render_reveal_page(employee_name, subject)
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.get("/dashboard")
+def dashboard():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM simulation_log WHERE status = 'clicked';")
+        total_clicks = cursor.fetchone()[0]
+
+        cursor.execute(
+            """
+            SELECT employee_id, template_id, status, sent_at, clicked_at
+            FROM simulation_log
+            WHERE status = 'clicked'
+            ORDER BY clicked_at DESC;
+            """
+        )
+        rows = cursor.fetchall()
+        clicks = [
+            {
+                "employee_id": str(r[0]),
+                "template_id": str(r[1]),
+                "status": r[2],
+                "sent_at": r[3].isoformat() if r[3] else None,
+                "clicked_at": r[4].isoformat() if r[4] else None,
+            }
+            for r in rows
+        ]
+
+        return {
+            "total_clicks": total_clicks,
+            "clicks": clicks
+        }
+    finally:
+        cursor.close()
+        conn.close()
+
+
 
 def render_template(html_body, employee, company_name, base_url, campaign_id):
     # Reuses your existing /track/{campaign_id}/{employee_id} endpoint,
