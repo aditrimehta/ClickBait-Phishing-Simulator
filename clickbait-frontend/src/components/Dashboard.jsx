@@ -9,23 +9,20 @@ export default function Dashboard({ employees = [] }) {
   const totalEmployees = employees.length;
   
   const sentEmployees = employees.filter(e => e.status !== 'Pending');
-  const clickedEmployees = employees.filter(e => e.phishOutcome === 'Clicked' || e.phishOutcome === 'Compromised');
-  const compromisedEmployees = employees.filter(e => e.phishOutcome === 'Compromised');
+  const clickedEmployees = employees.filter(e => e.phishOutcome === 'Clicked');
   const trainedEmployees = employees.filter(e => e.status === 'Training Attended');
 
   const totalSent = sentEmployees.length;
   const totalClicked = clickedEmployees.length;
-  const totalCompromised = compromisedEmployees.length;
   const totalTrained = trainedEmployees.length;
 
   const clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : '0.0';
   const trainingRate = totalClicked > 0 ? ((totalTrained / totalClicked) * 100).toFixed(1) : '0.0';
 
-  // 1. Data for Conversion Funnel Chart (Sent -> Clicked -> Compromised)
+  // 1. Data for Conversion Funnel Chart (Sent -> Clicked)
   const funnelData = [
     { name: 'Emails Dispatched', count: totalSent },
-    { name: 'Links Clicked', count: totalClicked },
-    { name: 'Credentials Submitted', count: totalCompromised }
+    { name: 'Links Clicked', count: totalClicked }
   ];
 
   // 2. Data for Department Breakdown (Vulnerable counts)
@@ -45,12 +42,12 @@ export default function Dashboard({ employees = [] }) {
 
   // 3. Area trend chart data
   const trendData = [
-    { time: '09:00', sent: Math.round(totalSent * 0.1), clicked: Math.round(totalClicked * 0.0), compromised: Math.round(totalCompromised * 0.0) },
-    { time: '10:00', sent: Math.round(totalSent * 0.3), clicked: Math.round(totalClicked * 0.2), compromised: Math.round(totalCompromised * 0.1) },
-    { time: '11:00', sent: Math.round(totalSent * 0.5), clicked: Math.round(totalClicked * 0.4), compromised: Math.round(totalCompromised * 0.3) },
-    { time: '12:00', sent: Math.round(totalSent * 0.7), clicked: Math.round(totalClicked * 0.6), compromised: Math.round(totalCompromised * 0.5) },
-    { time: '13:00', sent: Math.round(totalSent * 0.8), clicked: Math.round(totalClicked * 0.8), compromised: Math.round(totalCompromised * 0.7) },
-    { time: '14:00', sent: totalSent, clicked: totalClicked, compromised: totalCompromised },
+    { time: '09:00', sent: Math.round(totalSent * 0.1), clicked: Math.round(totalClicked * 0.0) },
+    { time: '10:00', sent: Math.round(totalSent * 0.3), clicked: Math.round(totalClicked * 0.2) },
+    { time: '11:00', sent: Math.round(totalSent * 0.5), clicked: Math.round(totalClicked * 0.4) },
+    { time: '12:00', sent: Math.round(totalSent * 0.7), clicked: Math.round(totalClicked * 0.6) },
+    { time: '13:00', sent: Math.round(totalSent * 0.8), clicked: Math.round(totalClicked * 0.8) },
+    { time: '14:00', sent: totalSent, clicked: totalClicked },
   ];
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -154,7 +151,7 @@ export default function Dashboard({ employees = [] }) {
                   {funnelData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={entry.name === 'Credentials Submitted' ? '#ef4444' : entry.name === 'Links Clicked' ? '#f59e0b' : '#3b82f6'} 
+                      fill={entry.name === 'Links Clicked' ? '#f59e0b' : '#3b82f6'}
                     />
                   ))}
                 </Bar>

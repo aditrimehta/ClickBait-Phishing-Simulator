@@ -23,7 +23,7 @@ const DEMO_LOGS = [
 
 // How often to re-fetch employees to pick up link clicks that happen
 // outside the app (someone opening the email later and clicking).
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 30_000;
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');

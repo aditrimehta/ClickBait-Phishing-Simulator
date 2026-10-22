@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import {
     Mail,
@@ -39,11 +39,11 @@ export default function TrainingPortal({
     // LOAD TRAINING DATA FROM BACKEND
     // =========================================================
 
-    const loadTrainingData = async () => {
+    const loadTrainingData = useCallback(async ({ showLoading = true } = {}) => {
 
         try {
 
-            setLoading(true);
+            if (showLoading) setLoading(true);
             setError('');
 
             const data = await getTrainingData();
@@ -129,7 +129,7 @@ export default function TrainingPortal({
 
         }
 
-    };
+    }, []);
 
 
     // =========================================================
@@ -140,7 +140,14 @@ export default function TrainingPortal({
 
         loadTrainingData();
 
-    }, []);
+        const refreshInterval = setInterval(
+            () => loadTrainingData({ showLoading: false }),
+            30_000
+        );
+
+        return () => clearInterval(refreshInterval);
+
+    }, [loadTrainingData]);
 
 
     // =========================================================
@@ -551,6 +558,8 @@ export default function TrainingPortal({
                                     'var(--success-accent)'
                             }}
                         >
+                            {loading ? '—' : `${completionRate}%`}
+                            {' · '}
                             {totalCompleted}
                             {' '}
                             of
@@ -563,13 +572,21 @@ export default function TrainingPortal({
                     </div>
 
 
-                    <div className="progress-bar-bg">
+                    <div
+                        className="progress-bar-bg"
+                        role="progressbar"
+                        aria-label="Security awareness training completion"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={loading ? 0 : completionRate}
+                        aria-valuetext={`${totalCompleted} of ${totalPhished} employees completed training`}
+                    >
 
                         <div
                             className="progress-bar-fill"
                             style={{
                                 width:
-                                    `${completionRate}%`
+                                    `${loading ? 0 : completionRate}%`
                             }}
                         />
 

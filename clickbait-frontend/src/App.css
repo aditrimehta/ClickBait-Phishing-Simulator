@@ -784,7 +784,8 @@ input:checked+.toggle-slider:before {
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--success-accent);
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(22, 163, 74, 0.45);
   transition: width 0.5s ease-in-out;
   width: 0%;
 }
