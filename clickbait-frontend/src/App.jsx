@@ -10,17 +10,6 @@ import { getEmployees } from './api/employeeApi';
 
 import './App.css';
 
-const DEMO_LOGS = [
-  {
-    time: '09:12:04',
-    text: 'System initialized.',
-  },
-  {
-    time: '09:30:15',
-    text: 'Demo security activity loaded.',
-  },
-];
-
 // How often to re-fetch employees to pick up link clicks that happen
 // outside the app (someone opening the email later and clicking).
 const POLL_INTERVAL_MS = 30_000;
@@ -42,8 +31,6 @@ function App() {
       return null;
     }
   });
-
-  const [logs] = useState(DEMO_LOGS);
 
   // Ref so the polling interval always calls the latest version of
   // refreshEmployees without needing to reset the interval on every render.
@@ -192,10 +179,11 @@ function App() {
             employees={employees}
             loading={loadingEmployees}
             onSimulationSent={() => refreshEmployees({ silent: true })}
+            onEmployeeReset={() => refreshEmployees({ silent: true })}
           />
         )}
 
-        {activeTab === 'training' && <TrainingPortal logs={logs} />}
+        {activeTab === 'training' && <TrainingPortal />}
       </div>
     </div>
   );

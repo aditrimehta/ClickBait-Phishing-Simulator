@@ -65,7 +65,11 @@ def get_employees():
             """
             SELECT DISTINCT ON (employee_id)
                 employee_id, status
-            FROM simulation_log
+            FROM simulation_log sl
+            WHERE sl.log_id > COALESCE((
+                SELECT MAX(r.log_id) FROM simulation_log r
+                WHERE r.employee_id = sl.employee_id AND r.status = 'reset'
+            ), 0)
             ORDER BY employee_id,
                      (status = 'clicked') DESC,
                      sent_at DESC;
@@ -77,8 +81,12 @@ def get_employees():
         cursor.execute(
             """
             SELECT DISTINCT employee_id
-            FROM training_log
-            WHERE status = 'completed';
+            FROM training_log tl
+            WHERE status = 'completed'
+              AND tl.sent_at > COALESCE((
+                  SELECT MAX(r.sent_at) FROM simulation_log r
+                  WHERE r.employee_id = tl.employee_id AND r.status = 'reset'
+              ), '-infinity'::timestamp);
             """
         )
         completed_training_employee_ids = {str(r[0]) for r in cursor.fetchall()}
@@ -121,6 +129,80 @@ def get_employees():
 
         return employees
 
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.post("/employees/{employee_number}/reset")
+def reset_employee(employee_number: str):
+    """Start a new cycle after completed training, preserving previous logs."""
+    try:
+        number = int(employee_number)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Employee number must be numeric")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Serialize resets for this employee so a repeated click cannot reset twice.
+        cursor.execute(
+            "SELECT employee_id FROM employee WHERE employee_number = %s FOR UPDATE;",
+            (number,),
+        )
+        employee = cursor.fetchone()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+
+        employee_id = employee[0]
+        cursor.execute(
+            """
+            SELECT sl.template_id
+            FROM simulation_log sl
+            WHERE sl.employee_id = %s
+              AND sl.status = 'clicked'
+              AND sl.log_id > COALESCE((
+                  SELECT MAX(r.log_id) FROM simulation_log r
+                  WHERE r.employee_id = sl.employee_id AND r.status = 'reset'
+              ), 0)
+              AND EXISTS (
+                  SELECT 1 FROM training_log tl
+                  WHERE tl.employee_id = sl.employee_id
+                    AND tl.status = 'completed'
+                    AND tl.sent_at > COALESCE((
+                        SELECT MAX(r.sent_at) FROM simulation_log r
+                        WHERE r.employee_id = sl.employee_id AND r.status = 'reset'
+                    ), '-infinity'::timestamp)
+              )
+            ORDER BY sl.log_id DESC
+            LIMIT 1;
+            """,
+            (employee_id,),
+        )
+        completed_cycle = cursor.fetchone()
+        if not completed_cycle:
+            raise HTTPException(
+                status_code=409,
+                detail="Only employees with completed training can be reset.",
+            )
+
+        # A reset marker separates active records from historical cycles.
+        cursor.execute(
+            """
+            INSERT INTO simulation_log (employee_id, template_id, status)
+            VALUES (%s, %s, 'reset');
+            """,
+            (employee_id, completed_cycle[0]),
+        )
+        conn.commit()
+        return {"message": "Employee reset to Pending. You can send a new simulation."}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail="Unable to reset employee.")
     finally:
         cursor.close()
         conn.close()
@@ -481,6 +563,11 @@ def track_click(campaign_id: str, employee_id: str, request: Request):
             WHERE log_id = (
                 SELECT log_id FROM simulation_log
                 WHERE employee_id = %s AND template_id = %s
+                  AND log_id > COALESCE((
+                      SELECT MAX(r.log_id) FROM simulation_log r
+                      WHERE r.employee_id = simulation_log.employee_id
+                        AND r.status = 'reset'
+                  ), 0)
                 ORDER BY sent_at DESC
                 LIMIT 1
             );
@@ -562,6 +649,11 @@ def track_click(campaign_id: str, employee_id: str, request: Request):
             WHERE log_id = (
                 SELECT log_id FROM simulation_log
                 WHERE employee_id = %s AND template_id = %s
+                  AND log_id > COALESCE((
+                      SELECT MAX(r.log_id) FROM simulation_log r
+                      WHERE r.employee_id = simulation_log.employee_id
+                        AND r.status = 'reset'
+                  ), 0)
                 ORDER BY sent_at DESC
                 LIMIT 1
             );
@@ -704,6 +796,10 @@ def get_training():
                 FROM simulation_log
                 WHERE employee_id = e.employee_id
                   AND status = 'clicked'
+                  AND log_id > COALESCE((
+                      SELECT MAX(r.log_id) FROM simulation_log r
+                      WHERE r.employee_id = e.employee_id AND r.status = 'reset'
+                  ), 0)
                 ORDER BY sent_at DESC
                 LIMIT 1
             ) sl ON TRUE
@@ -715,6 +811,10 @@ def get_training():
                     completed_at
                 FROM training_log
                 WHERE employee_id = e.employee_id
+                  AND sent_at > COALESCE((
+                      SELECT MAX(r.sent_at) FROM simulation_log r
+                      WHERE r.employee_id = e.employee_id AND r.status = 'reset'
+                  ), '-infinity'::timestamp)
                 ORDER BY sent_at DESC
                 LIMIT 1
             ) tl ON TRUE

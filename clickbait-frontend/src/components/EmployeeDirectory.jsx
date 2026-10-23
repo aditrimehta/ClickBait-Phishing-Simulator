@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Send, MousePointer, ShieldAlert, X } from 'lucide-react';
+import { Search, Send, MousePointer, ShieldAlert, RotateCcw, X } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -7,6 +7,7 @@ export default function EmployeeDirectory({
   employees = [],
   loading = false,
   onSimulationSent,
+  onEmployeeReset,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
@@ -26,6 +27,9 @@ export default function EmployeeDirectory({
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
   const [sendSuccess, setSendSuccess] = useState(null);
+  const [resettingEmployee, setResettingEmployee] = useState(null);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   useEffect(() => {
     if (!isSendModalOpen) return;
@@ -152,6 +156,32 @@ export default function EmployeeDirectory({
     }
   };
 
+  const handleResetEmployee = async (employee) => {
+    setResettingEmployee(employee.id);
+    setResetError('');
+    setResetSuccess('');
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/employees/${encodeURIComponent(employee.employee_number)}/reset`,
+        { method: 'POST' },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Unable to reset employee.');
+      }
+
+      await onEmployeeReset?.();
+      setResetSuccess(
+        `${employee.name} is now Pending. You can send a new simulation.`,
+      );
+    } catch (error) {
+      setResetError(error.message);
+    } finally {
+      setResettingEmployee(null);
+    }
+  };
+
   const renderStatusBadge = (status) => {
     switch (status) {
       case 'Sent':
@@ -254,6 +284,17 @@ export default function EmployeeDirectory({
         </div>
       </div>
 
+      {(resetError || resetSuccess) && (
+        <p
+          role={resetError ? 'alert' : 'status'}
+          style={{
+            color: resetError ? 'var(--danger-accent)' : 'var(--success-accent)',
+          }}
+        >
+          {resetError || resetSuccess}
+        </p>
+      )}
+
       {/* Employee table */}
       <div className="table-wrapper">
         <table className="employee-table">
@@ -263,6 +304,7 @@ export default function EmployeeDirectory({
               <th>Employee ID</th>
               <th>Department</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -270,7 +312,7 @@ export default function EmployeeDirectory({
             {loading ? (
               <tr>
                 <td
-                  colSpan="4"
+                  colSpan="5"
                   style={{
                     textAlign: 'center',
                     padding: '40px',
@@ -283,7 +325,7 @@ export default function EmployeeDirectory({
             ) : filteredEmployees.length === 0 ? (
               <tr>
                 <td
-                  colSpan="4"
+                  colSpan="5"
                   style={{
                     textAlign: 'center',
                     padding: '40px',
@@ -321,6 +363,21 @@ export default function EmployeeDirectory({
 
                   {/* Status */}
                   <td>{renderStatusBadge(emp.status)}</td>
+                  <td>
+                    {emp.status === 'Training Attended' && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleResetEmployee(emp)}
+                        disabled={resettingEmployee !== null}
+                        aria-label={`Reset training status for ${emp.name}`}
+                        title="Return to Pending for a new simulation cycle"
+                      >
+                        <RotateCcw size={12} />
+                        {resettingEmployee === emp.id ? 'Resetting...' : 'Reset'}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

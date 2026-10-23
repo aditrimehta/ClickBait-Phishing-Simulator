@@ -6,12 +6,11 @@ import {
   Send,
   CheckCircle,
   ShieldAlert,
-  Terminal,
 } from 'lucide-react';
 
 import { getTrainingData, sendTrainingInvite } from '../api/trainingApi';
 
-export default function TrainingPortal({ logs = [] }) {
+export default function TrainingPortal() {
   // =========================================================
   // STATE
   // =========================================================
@@ -346,7 +345,7 @@ export default function TrainingPortal({ logs = [] }) {
       <div
         className="charts-grid"
         style={{
-          gridTemplateColumns: '2fr 1fr',
+          gridTemplateColumns: '1fr',
         }}
       >
         {/* =================================================
@@ -587,58 +586,6 @@ export default function TrainingPortal({ logs = [] }) {
           </div>
         </div>
 
-        {/* =================================================
-                    ACTIVITY LOG
-                ================================================= */}
-
-        <div
-          className="chart-card"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <h3 className="chart-title">
-            <Terminal size={16} />
-            Campaign Activity Log
-          </h3>
-
-          <div
-            style={{
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-              marginBottom: '12px',
-            }}
-          >
-            Real-time event stream
-          </div>
-
-          <div
-            className="console-log-box"
-            style={{
-              flexGrow: 1,
-              minHeight: '240px',
-            }}
-          >
-            {logs.length === 0 ? (
-              <div
-                style={{
-                  color: 'var(--text-muted)',
-                }}
-              >
-                No recent activity logged
-              </div>
-            ) : (
-              logs.map((log, idx) => (
-                <div key={idx} className="console-line">
-                  <span className="console-timestamp">[{log.time}]</span>
-
-                  <span>{log.text}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
