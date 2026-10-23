@@ -77,7 +77,7 @@ def wipe_and_seed(conn):
         INSERT INTO email_template (dept_id, subject, html_body)
         VALUES (%s, %s, %s);
         """,
-        rows
+        rows,
     )
 
     conn.commit()

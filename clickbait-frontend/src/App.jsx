@@ -13,12 +13,12 @@ import './App.css';
 const DEMO_LOGS = [
   {
     time: '09:12:04',
-    text: 'System initialized.'
+    text: 'System initialized.',
   },
   {
     time: '09:30:15',
-    text: 'Demo security activity loaded.'
-  }
+    text: 'Demo security activity loaded.',
+  },
 ];
 
 // How often to re-fetch employees to pick up link clicks that happen
@@ -94,10 +94,7 @@ function App() {
   const handleAuthenticated = (admin) => {
     setUser(admin);
 
-    localStorage.setItem(
-      'phishguard_user',
-      JSON.stringify(admin)
-    );
+    localStorage.setItem('phishguard_user', JSON.stringify(admin));
   };
 
   const handleLogout = () => {
@@ -109,16 +106,11 @@ function App() {
 
   // Login page
   if (!user) {
-    return (
-      <AuthPage
-        onAuthenticated={handleAuthenticated}
-      />
-    );
+    return <AuthPage onAuthenticated={handleAuthenticated} />;
   }
 
   return (
     <div className="app-container">
-
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -126,26 +118,18 @@ function App() {
       />
 
       <div className="main-workspace">
-
         {/* Header */}
         <header className="workspace-header">
-
           <div>
             <h1 className="workspace-title">
+              {activeTab === 'dashboard' && 'SECURITY DASHBOARD'}
 
-              {activeTab === 'dashboard' &&
-                'SECURITY DASHBOARD'}
+              {activeTab === 'directory' && 'EMPLOYEE DIRECTORY'}
 
-              {activeTab === 'directory' &&
-                'EMPLOYEE DIRECTORY'}
-
-              {activeTab === 'training' &&
-                'CYBER TRAINING PORTAL'}
-
+              {activeTab === 'training' && 'CYBER TRAINING PORTAL'}
             </h1>
 
             <div className="workspace-subtitle">
-
               {activeTab === 'dashboard' &&
                 'Security awareness metrics and activity overview'}
 
@@ -154,7 +138,6 @@ function App() {
 
               {activeTab === 'training' &&
                 'Training invitations and completion status'}
-
             </div>
           </div>
 
@@ -163,14 +146,13 @@ function App() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '12px'
+              gap: '12px',
             }}
           >
-
             <span
               style={{
                 fontSize: '12px',
-                color: 'var(--text-muted)'
+                color: 'var(--text-muted)',
               }}
             >
               {user.email}
@@ -182,9 +164,7 @@ function App() {
             >
               Logout
             </button>
-
           </div>
-
         </header>
 
         {/* Database error */}
@@ -196,7 +176,7 @@ function App() {
               borderRadius: '6px',
               background: '#fef2f2',
               color: '#dc2626',
-              border: '1px solid #fecaca'
+              border: '1px solid #fecaca',
             }}
           >
             {employeeError}
@@ -204,11 +184,7 @@ function App() {
         )}
 
         {/* Dashboard */}
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            employees={employees}
-          />
-        )}
+        {activeTab === 'dashboard' && <Dashboard employees={employees} />}
 
         {/* Employee Directory */}
         {activeTab === 'directory' && (
@@ -219,10 +195,7 @@ function App() {
           />
         )}
 
-        {activeTab === 'training' && (
-    <TrainingPortal  logs={logs} />
-)}
-
+        {activeTab === 'training' && <TrainingPortal logs={logs} />}
       </div>
     </div>
   );

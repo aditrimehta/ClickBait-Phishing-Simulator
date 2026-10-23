@@ -33,6 +33,8 @@ BASE_URL = "http://127.0.0.1:8000"
 COMPANY_NAME = "Acme Corp"
 
 password_hash = PasswordHash.recommended()
+
+
 @app.get("/employees")
 def get_employees():
     conn = get_connection()
@@ -70,9 +72,7 @@ def get_employees():
             """
         )
         latest_status_rows = cursor.fetchall()
-        latest_status_by_employee = {
-            str(r[0]): r[1] for r in latest_status_rows
-        }
+        latest_status_by_employee = {str(r[0]): r[1] for r in latest_status_rows}
 
         cursor.execute(
             """
@@ -81,9 +81,7 @@ def get_employees():
             WHERE status = 'completed';
             """
         )
-        completed_training_employee_ids = {
-            str(r[0]) for r in cursor.fetchall()
-        }
+        completed_training_employee_ids = {str(r[0]) for r in cursor.fetchall()}
 
         employees = []
         for row in rows:
@@ -106,20 +104,20 @@ def get_employees():
                 status = "Pending"
                 phish_outcome = None
 
-            employees.append({
-                "id": employee_id,
-                "employee_number": (
-                    f"{row[1]:03d}"
-                    if row[1] is not None
-                    else None
-                ),
-                "name": row[2],
-                "email": row[3],
-                "dept_id": str(row[4]),
-                "department": row[5],
-                "status": status,
-                "phishOutcome": phish_outcome
-            })
+            employees.append(
+                {
+                    "id": employee_id,
+                    "employee_number": (
+                        f"{row[1]:03d}" if row[1] is not None else None
+                    ),
+                    "name": row[2],
+                    "email": row[3],
+                    "dept_id": str(row[4]),
+                    "department": row[5],
+                    "status": status,
+                    "phishOutcome": phish_outcome,
+                }
+            )
 
         return employees
 
@@ -181,7 +179,7 @@ def send_simulation(payload: SendSimulationRequest):
         # 1. look up the chosen template
         cursor.execute(
             "SELECT subject, html_body FROM email_template WHERE template_id = %s;",
-            (payload.template_id,)
+            (payload.template_id,),
         )
         template_row = cursor.fetchone()
 
@@ -193,7 +191,9 @@ def send_simulation(payload: SendSimulationRequest):
         # 2. look up the target employee(s)
         if payload.type == "individual":
             if not payload.employee_number:
-                raise HTTPException(status_code=400, detail="employee_number is required")
+                raise HTTPException(
+                    status_code=400, detail="employee_number is required"
+                )
 
             # employee_number is an integer column in Postgres, but the
             # frontend sends a padded string like "001" — cast it here
@@ -201,7 +201,9 @@ def send_simulation(payload: SendSimulationRequest):
             try:
                 employee_number_int = int(payload.employee_number)
             except ValueError:
-                raise HTTPException(status_code=400, detail="employee_number must be numeric")
+                raise HTTPException(
+                    status_code=400, detail="employee_number must be numeric"
+                )
 
             cursor.execute(
                 """
@@ -210,7 +212,7 @@ def send_simulation(payload: SendSimulationRequest):
                 JOIN departments d ON e.dept_id = d.dept_id
                 WHERE e.employee_number = %s;
                 """,
-                (employee_number_int,)
+                (employee_number_int,),
             )
             rows = cursor.fetchall()
 
@@ -225,12 +227,14 @@ def send_simulation(payload: SendSimulationRequest):
                 JOIN departments d ON e.dept_id = d.dept_id
                 WHERE d.name = %s;
                 """,
-                (payload.department,)
+                (payload.department,),
             )
             rows = cursor.fetchall()
 
         else:
-            raise HTTPException(status_code=400, detail="type must be 'individual' or 'department'")
+            raise HTTPException(
+                status_code=400, detail="type must be 'individual' or 'department'"
+            )
 
         if not rows:
             raise HTTPException(status_code=404, detail="No matching employee(s) found")
@@ -248,8 +252,11 @@ def send_simulation(payload: SendSimulationRequest):
             }
 
             rendered_html = render_template(
-                html_body, employee, COMPANY_NAME, BASE_URL,
-                campaign_id=payload.template_id
+                html_body,
+                employee,
+                COMPANY_NAME,
+                BASE_URL,
+                campaign_id=payload.template_id,
             )
 
             record = {
@@ -279,7 +286,7 @@ def send_simulation(payload: SendSimulationRequest):
                 INSERT INTO simulation_log (employee_id, template_id, status)
                 VALUES (%s, %s, %s);
                 """,
-                (employee["employee_id"], payload.template_id, record["status"])
+                (employee["employee_id"], payload.template_id, record["status"]),
             )
 
             recipients.append(record)
@@ -325,16 +332,13 @@ def admin_login(data: LoginRequest):
             FROM admin
             WHERE email = %s
             """,
-            (data.email,)
+            (data.email,),
         )
 
         admin = cursor.fetchone()
 
         if not admin:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password"
-            )
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
         admin_id, name, email, password_hashed = admin
 
@@ -344,23 +348,15 @@ def admin_login(data: LoginRequest):
             # e.g. UnknownHashError if the stored hash isn't in a format
             # pwdlib recognizes — treat it as a real 500, not a silent crash
             raise HTTPException(
-                status_code=500,
-                detail=f"Password verification failed: {e}"
+                status_code=500, detail=f"Password verification failed: {e}"
             )
 
         if not valid:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid email or password"
-            )
+            raise HTTPException(status_code=401, detail="Invalid email or password")
 
         return {
             "message": "Login successful",
-            "admin": {
-                "admin_id": str(admin_id),
-                "name": name,
-                "email": email
-            }
+            "admin": {"admin_id": str(admin_id), "name": name, "email": email},
         }
 
     except HTTPException:
@@ -370,6 +366,7 @@ def admin_login(data: LoginRequest):
     finally:
         cursor.close()
         conn.close()
+
 
 @app.get("/test-db")
 def test_db():
@@ -383,6 +380,7 @@ def test_db():
     conn.close()
 
     return {"database_time": result[0]}
+
 
 def render_reveal_page(employee_name, subject):
     """
@@ -466,11 +464,7 @@ def render_reveal_page(employee_name, subject):
 
 
 @app.get("/track/{campaign_id}/{employee_id}", response_class=HTMLResponse)
-def track_click(
-    campaign_id: str,
-    employee_id: str,
-    request: Request
-):
+def track_click(campaign_id: str, employee_id: str, request: Request):
     """
     campaign_id here is actually the template_id (see render_template).
     Flips the most recent matching simulation_log row to 'clicked' and
@@ -491,16 +485,20 @@ def track_click(
                 LIMIT 1
             );
             """,
-            (employee_id, campaign_id)
+            (employee_id, campaign_id),
         )
         conn.commit()
 
         # pull the employee's name + template subject to personalize the page
-        cursor.execute("SELECT name FROM employee WHERE employee_id = %s;", (employee_id,))
+        cursor.execute(
+            "SELECT name FROM employee WHERE employee_id = %s;", (employee_id,)
+        )
         emp_row = cursor.fetchone()
         employee_name = emp_row[0] if emp_row else None
 
-        cursor.execute("SELECT subject FROM email_template WHERE template_id = %s;", (campaign_id,))
+        cursor.execute(
+            "SELECT subject FROM email_template WHERE template_id = %s;", (campaign_id,)
+        )
         subj_row = cursor.fetchone()
         subject = subj_row[0] if subj_row else None
 
@@ -540,22 +538,14 @@ def dashboard():
             for r in rows
         ]
 
-        return {
-            "total_clicks": total_clicks,
-            "clicks": clicks
-        }
+        return {"total_clicks": total_clicks, "clicks": clicks}
     finally:
         cursor.close()
         conn.close()
-
 
 
 @app.get("/track/{campaign_id}/{employee_id}", response_class=HTMLResponse)
-def track_click(
-    campaign_id: str,
-    employee_id: str,
-    request: Request
-):
+def track_click(campaign_id: str, employee_id: str, request: Request):
     """
     campaign_id here is actually the template_id (see render_template).
     Flips the most recent matching simulation_log row to 'clicked' and
@@ -576,16 +566,20 @@ def track_click(
                 LIMIT 1
             );
             """,
-            (employee_id, campaign_id)
+            (employee_id, campaign_id),
         )
         conn.commit()
 
         # pull the employee's name + template subject to personalize the page
-        cursor.execute("SELECT name FROM employee WHERE employee_id = %s;", (employee_id,))
+        cursor.execute(
+            "SELECT name FROM employee WHERE employee_id = %s;", (employee_id,)
+        )
         emp_row = cursor.fetchone()
         employee_name = emp_row[0] if emp_row else None
 
-        cursor.execute("SELECT subject FROM email_template WHERE template_id = %s;", (campaign_id,))
+        cursor.execute(
+            "SELECT subject FROM email_template WHERE template_id = %s;", (campaign_id,)
+        )
         subj_row = cursor.fetchone()
         subject = subj_row[0] if subj_row else None
 
@@ -625,14 +619,10 @@ def dashboard():
             for r in rows
         ]
 
-        return {
-            "total_clicks": total_clicks,
-            "clicks": clicks
-        }
+        return {"total_clicks": total_clicks, "clicks": clicks}
     finally:
         cursor.close()
         conn.close()
-
 
 
 def render_template(html_body, employee, company_name, base_url, campaign_id):
@@ -655,9 +645,7 @@ def send_email(to_email, subject, html_body):
     caller can decide how to record/report it per recipient.
     """
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        raise RuntimeError(
-            "GMAIL_USER / GMAIL_APP_PASSWORD not set in .env"
-        )
+        raise RuntimeError("GMAIL_USER / GMAIL_APP_PASSWORD not set in .env")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -669,6 +657,7 @@ def send_email(to_email, subject, html_body):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, to_email, msg.as_string())
+
 
 # =========================================================
 # TRAINING
@@ -739,36 +728,22 @@ def get_training():
         employees = []
 
         for row in rows:
-            employees.append({
-                "employee_id": str(row[0]),
-                "employee_number": (
-                    f"{row[1]:03d}"
-                    if row[1] is not None
-                    else None
-                ),
-                "name": row[2],
-                "email": row[3],
-                "department": row[4],
-
-                "simulation_status": row[5],
-                "clicked_at": (
-                    row[6].isoformat()
-                    if row[6]
-                    else None
-                ),
-
-                "training_status": row[7],
-                "training_sent_at": (
-                    row[8].isoformat()
-                    if row[8]
-                    else None
-                ),
-                "completed_at": (
-                    row[9].isoformat()
-                    if row[9]
-                    else None
-                )
-            })
+            employees.append(
+                {
+                    "employee_id": str(row[0]),
+                    "employee_number": (
+                        f"{row[1]:03d}" if row[1] is not None else None
+                    ),
+                    "name": row[2],
+                    "email": row[3],
+                    "department": row[4],
+                    "simulation_status": row[5],
+                    "clicked_at": (row[6].isoformat() if row[6] else None),
+                    "training_status": row[7],
+                    "training_sent_at": (row[8].isoformat() if row[8] else None),
+                    "completed_at": (row[9].isoformat() if row[9] else None),
+                }
+            )
 
         return employees
 
@@ -798,10 +773,8 @@ def send_training(employee_number: str):
             employee_number_int = int(employee_number)
         except ValueError:
             raise HTTPException(
-                status_code=400,
-                detail="Employee number must be numeric"
+                status_code=400, detail="Employee number must be numeric"
             )
-
 
         # -------------------------------------------------
         # 2. Find employee
@@ -817,23 +790,18 @@ def send_training(employee_number: str):
             FROM employee
             WHERE employee_number = %s;
             """,
-            (employee_number_int,)
+            (employee_number_int,),
         )
 
         employee_row = cursor.fetchone()
 
         if not employee_row:
-            raise HTTPException(
-                status_code=404,
-                detail="Employee not found"
-            )
-
+            raise HTTPException(status_code=404, detail="Employee not found")
 
         employee_id = str(employee_row[0])
         employee_number_value = employee_row[1]
         employee_name = employee_row[2]
         employee_email = employee_row[3]
-
 
         # -------------------------------------------------
         # 3. Get training email template
@@ -855,15 +823,12 @@ def send_training(employee_number: str):
 
         if not template_row:
             raise HTTPException(
-                status_code=404,
-                detail="Training email template not found"
+                status_code=404, detail="Training email template not found"
             )
-
 
         template_id = str(template_row[0])
         subject = template_row[1]
         html_body = template_row[2]
-
 
         # -------------------------------------------------
         # 4. Create training record first
@@ -879,23 +844,16 @@ def send_training(employee_number: str):
             VALUES (%s, %s, 'sent')
             RETURNING training_id;
             """,
-            (
-                employee_id,
-                template_id
-            )
+            (employee_id, template_id),
         )
 
         training_id = cursor.fetchone()[0]
-
 
         # -------------------------------------------------
         # 5. Create unique training confirmation link
         # -------------------------------------------------
 
-        training_link = (
-            f"{BASE_URL}/training/confirm/{training_id}"
-        )
-
+        training_link = f"{BASE_URL}/training/confirm/{training_id}"
 
         # -------------------------------------------------
         # 6. Replace email placeholders
@@ -903,26 +861,13 @@ def send_training(employee_number: str):
 
         rendered_html = html_body
 
-        rendered_html = rendered_html.replace(
-            "{{name}}",
-            employee_name
-        )
+        rendered_html = rendered_html.replace("{{name}}", employee_name)
 
-        rendered_html = rendered_html.replace(
-            "{{employee_email}}",
-            employee_email
-        )
+        rendered_html = rendered_html.replace("{{employee_email}}", employee_email)
 
-        rendered_html = rendered_html.replace(
-            "{{company_name}}",
-            COMPANY_NAME
-        )
+        rendered_html = rendered_html.replace("{{company_name}}", COMPANY_NAME)
 
-        rendered_html = rendered_html.replace(
-            "{{training_link}}",
-            training_link
-        )
-
+        rendered_html = rendered_html.replace("{{training_link}}", training_link)
 
         # -------------------------------------------------
         # 7. Send email
@@ -930,11 +875,7 @@ def send_training(employee_number: str):
 
         try:
 
-            send_email(
-                employee_email,
-                subject,
-                rendered_html
-            )
+            send_email(employee_email, subject, rendered_html)
 
         except Exception as e:
 
@@ -945,28 +886,22 @@ def send_training(employee_number: str):
                 DELETE FROM training_log
                 WHERE training_id = %s;
                 """,
-                (training_id,)
+                (training_id,),
             )
 
             conn.commit()
 
-            print(
-                f"[TRAINING SEND FAILED] "
-                f"{employee_email}: {e}"
-            )
+            print(f"[TRAINING SEND FAILED] " f"{employee_email}: {e}")
 
             raise HTTPException(
-                status_code=500,
-                detail=f"Training email failed to send: {e}"
+                status_code=500, detail=f"Training email failed to send: {e}"
             )
-
 
         # -------------------------------------------------
         # 8. Save everything
         # -------------------------------------------------
 
         conn.commit()
-
 
         return {
             "message": "Training invitation sent successfully.",
@@ -979,10 +914,9 @@ def send_training(employee_number: str):
                     else None
                 ),
                 "name": employee_name,
-                "email": employee_email
-            }
+                "email": employee_email,
+            },
         }
-
 
     except HTTPException:
         raise
@@ -991,10 +925,7 @@ def send_training(employee_number: str):
 
         conn.rollback()
 
-        raise HTTPException(
-            status_code=500,
-            detail=f"Unexpected error: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
     finally:
 
@@ -1007,10 +938,7 @@ def send_training(employee_number: str):
 # =========================================================
 
 
-@app.get(
-    "/training/confirm/{training_id}",
-    response_class=HTMLResponse
-)
+@app.get("/training/confirm/{training_id}", response_class=HTMLResponse)
 def confirm_training(training_id: str):
 
     conn = get_connection()
@@ -1028,7 +956,7 @@ def confirm_training(training_id: str):
               AND status = 'sent'
             RETURNING training_id;
             """,
-            (training_id,)
+            (training_id,),
         )
 
         result = cursor.fetchone()
@@ -1078,7 +1006,6 @@ def confirm_training(training_id: str):
             </body>
             </html>
             """
-
 
         return """
         <!DOCTYPE html>

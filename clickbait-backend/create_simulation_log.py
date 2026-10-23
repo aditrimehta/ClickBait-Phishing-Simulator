@@ -9,9 +9,11 @@ Run once from clickbait-backend/:
 
 from database import get_connection
 
+
 def create_table(conn):
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS simulation_log (
             log_id SERIAL PRIMARY KEY,
             employee_id UUID NOT NULL REFERENCES employee(employee_id),
@@ -20,7 +22,8 @@ def create_table(conn):
             sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             clicked_at TIMESTAMP
         );
-    """)
+    """
+    )
     conn.commit()
     cur.close()
     print("simulation_log table ready.")
